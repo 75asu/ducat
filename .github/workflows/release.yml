@@ -1,0 +1,76 @@
+name: Release
+
+# Fully automated, set-and-forget. Conventional commits land on main; release-please
+# opens/updates a "Release PR" (changelog + version bump in pyproject, __init__,
+# Chart.yaml). Merging that PR is the ONLY human step: it tags + creates the GitHub
+# Release, then the publish job pushes the image and the Helm chart. Never edit
+# versions or tags by hand. Graduate to prod with a commit footer "Release-As: 1.0.0".
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write       # release-please: commits, tags, releases
+  pull-requests: write  # release-please: the Release PR
+  packages: write       # publish: GHCR image + chart
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - name: Resolve version + image tags
+        id: v
+        shell: bash
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name }}"
+          VERSION="${TAG#v}"
+          IMG="ghcr.io/${{ github.repository }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if echo "$VERSION" | grep -qE '-'; then
+            # pre-release (e.g. a future -rc): only the exact version tag
+            echo "tags=$IMG:$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            printf 'tags=%s:%s\n%s:%s\n%s:latest\n' "$IMG" "$VERSION" "$IMG" "${VERSION%.*}" "$IMG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: azure/setup-helm@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.v.outputs.tags }}
+
+      - name: Package + push Helm chart (OCI)
+        shell: bash
+        run: |
+          helm package helm/ducat
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          helm push "ducat-${{ steps.v.outputs.version }}.tgz" "oci://ghcr.io/${{ github.repository_owner }}/charts"

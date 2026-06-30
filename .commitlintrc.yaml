@@ -1,0 +1,5 @@
+# Conventional Commits, enforced in CI (.github/workflows/commitlint.yml) and
+# locally (.pre-commit-config.yaml). release-please reads these to compute the
+# version + changelog: feat -> minor, fix -> patch, feat!/BREAKING CHANGE -> major.
+extends:
+  - "@commitlint/config-conventional"

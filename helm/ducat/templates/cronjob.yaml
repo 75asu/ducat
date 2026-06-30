@@ -1,0 +1,48 @@
+{{- if eq .Values.mode "cronjob" -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "ducat.fullname" . }}
+  labels:
+    {{- include "ducat.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.cronjob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            checksum/config: {{ toYaml .Values.config | sha256sum }}
+        spec:
+          serviceAccountName: {{ include "ducat.serviceAccountName" . }}
+          restartPolicy: {{ .Values.cronjob.restartPolicy }}
+          containers:
+            - name: ducat
+              image: {{ include "ducat.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - run
+                - --config
+                - /etc/ducat/config.yaml
+              {{- with .Values.envFrom }}
+              envFrom:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with .Values.env }}
+              env:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/ducat
+                  readOnly: true
+              {{- with .Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          volumes:
+            - name: config
+              configMap:
+                name: {{ include "ducat.fullname" . }}
+{{- end }}

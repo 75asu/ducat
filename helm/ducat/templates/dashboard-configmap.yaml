@@ -1,0 +1,19 @@
+{{- if .Values.dashboards.enabled -}}
+# Auto-discovered by the Grafana dashboard sidecar (kiwigrid) when it watches for
+# the configured label. On grafana-operator clusters, reference the JSON from a
+# GrafanaDashboard CR instead and set dashboards.enabled=false.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ducat.fullname" . }}-dashboard
+  labels:
+    {{- include "ducat.labels" . | nindent 4 }}
+    {{ .Values.dashboards.sidecarLabel }}: {{ .Values.dashboards.sidecarLabelValue | quote }}
+  {{- if .Values.dashboards.folder }}
+  annotations:
+    grafana_folder: {{ .Values.dashboards.folder | quote }}
+  {{- end }}
+data:
+  ducat.json: |
+{{ .Files.Get "dashboards/ducat.json" | indent 4 }}
+{{- end }}

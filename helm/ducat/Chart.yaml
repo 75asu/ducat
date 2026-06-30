@@ -1,0 +1,12 @@
+apiVersion: v2
+name: ducat
+description: One cost view across every provider , cloud, SaaS, and AI spend to Prometheus/Grafana.
+type: application
+version: 0.1.0 # x-release-please-version
+appVersion: "0.1.0" # x-release-please-version
+home: https://github.com/75asu/ducat
+sources:
+  - https://github.com/75asu/ducat
+keywords: [finops, cost, prometheus, grafana, focus, billing]
+maintainers:
+  - name: Asutosh Panda

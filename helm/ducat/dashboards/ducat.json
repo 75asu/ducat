@@ -1,0 +1,96 @@
+{
+  "title": "ducat , cost overview",
+  "uid": "ducat-overview",
+  "tags": ["finops", "cost", "ducat"],
+  "timezone": "",
+  "schemaVersion": 39,
+  "refresh": "1h",
+  "time": { "from": "now-30d", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {},
+        "hide": 0
+      },
+      {
+        "name": "provider",
+        "type": "query",
+        "datasource": "${datasource}",
+        "query": "label_values(ducat_cost_usd, provider)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total spend (selected period)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum(ducat_cost_usd{provider=~\"$provider\"})",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "piechart",
+      "title": "Spend by provider",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 9, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (provider) (ducat_cost_usd{provider=~\"$provider\"})",
+          "legendFormat": "{{provider}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Spend over time by provider",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 9, "w": 9, "x": 15, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } } } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (provider) (ducat_cost_usd{provider=~\"$provider\"})",
+          "legendFormat": "{{provider}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Spend by service",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true } } }
+      ],
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (provider, service) (ducat_cost_usd{provider=~\"$provider\"})",
+          "format": "table",
+          "instant": true
+        }
+      ]
+    }
+  ]
+}

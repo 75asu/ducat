@@ -1,0 +1,60 @@
+image:
+  repository: ghcr.io/75asu/ducat
+  tag: ""                      # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+# How ducat runs:
+#   serve   = long-running /metrics endpoint, scraped by Prometheus (a Deployment)
+#   cronjob = one-shot fetch + remote_write push on a schedule (a CronJob)
+mode: serve
+
+serve:
+  port: 9090
+  refreshInterval: 3600        # seconds between cost-API refreshes
+
+cronjob:
+  schedule: "0 * * * *"
+  restartPolicy: Never
+
+# Rendered verbatim into a ConfigMap as config.yaml.
+# Secrets are NOT here , provider tokens come from envFrom (an existing Secret).
+config:
+  providers:
+    github:
+      enabled: true
+      org: my-org
+      token_env: GITHUB_TOKEN
+  sink:
+    remote_write:
+      url: ""                  # required for cronjob mode
+      tenant: ""               # X-Scope-OrgID
+
+# Inject provider tokens from an existing Secret, e.g.
+#   envFrom:
+#     - secretRef: { name: ducat-secrets }
+envFrom: []
+env: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}              # AWS IRSA / GCP Workload Identity for keyless cloud adapters
+
+serviceMonitor:
+  enabled: false               # set true on a Prometheus-Operator cluster (serve mode)
+  interval: 1h
+  labels: {}
+
+# Ship the Grafana dashboard as a sidecar-labeled ConfigMap (auto-imported by the
+# Grafana kiwigrid sidecar). Set folder to drop it into an RBAC-restricted folder.
+dashboards:
+  enabled: true
+  sidecarLabel: grafana_dashboard
+  sidecarLabelValue: "1"
+  folder: ""                   # e.g. "FinOps" , restrict that folder to an SRE+CXO team in Grafana
+
+resources: {}
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,20 @@
+ducat is installed in mode: {{ .Values.mode }}
+
+{{- if eq .Values.mode "serve" }}
+Scrape endpoint:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "ducat.fullname" . }} {{ .Values.serve.port }}:{{ .Values.serve.port }}
+  curl localhost:{{ .Values.serve.port }}/metrics | grep ducat_cost_usd
+{{- if not .Values.serviceMonitor.enabled }}
+
+ServiceMonitor is disabled. On a Prometheus-Operator cluster, set
+serviceMonitor.enabled=true so the metrics get scraped.
+{{- end }}
+{{- else }}
+CronJob '{{ include "ducat.fullname" . }}' runs on schedule: {{ .Values.cronjob.schedule }}
+It fetches cost and remote_writes to: {{ .Values.config.sink.remote_write.url | default "(set config.sink.remote_write.url)" }}
+
+  kubectl -n {{ .Release.Namespace }} create job --from=cronjob/{{ include "ducat.fullname" . }} ducat-manual
+{{- end }}
+
+Provider tokens must be supplied via envFrom (an existing Secret); they are
+never stored in the chart. See values.yaml.
