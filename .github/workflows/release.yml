@@ -5,9 +5,17 @@ name: Release
 # Chart.yaml). Merging that PR is the ONLY human step: it tags + creates the GitHub
 # Release, then the publish job pushes the image and the Helm chart. Never edit
 # versions or tags by hand. Graduate to prod with a commit footer "Release-As: 1.0.0".
+#
+# workflow_dispatch(publish_tag) is an escape hatch to re-publish artifacts for an
+# existing tag (e.g. if a publish step failed).
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish_tag:
+        description: "Re-publish image + chart for an existing tag, e.g. v0.1.0"
+        required: true
 
 permissions:
   contents: write       # release-please: commits, tags, releases
@@ -16,6 +24,7 @@ permissions:
 
 jobs:
   release-please:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       release_created: ${{ steps.rp.outputs.release_created }}
@@ -29,27 +38,30 @@ jobs:
 
   publish:
     needs: release-please
-    if: needs.release-please.outputs.release_created == 'true'
+    if: |
+      always() &&
+      (needs.release-please.outputs.release_created == 'true' ||
+       github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ needs.release-please.outputs.tag_name || inputs.publish_tag }}
 
       - name: Resolve version + image tags
         id: v
         shell: bash
         run: |
-          TAG="${{ needs.release-please.outputs.tag_name }}"
+          TAG="${{ needs.release-please.outputs.tag_name || inputs.publish_tag }}"
           VERSION="${TAG#v}"
           IMG="ghcr.io/${{ github.repository }}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if echo "$VERSION" | grep -qE '-'; then
-            # pre-release (e.g. a future -rc): only the exact version tag
-            echo "tags=$IMG:$VERSION" >> "$GITHUB_OUTPUT"
-          else
-            printf 'tags=%s:%s\n%s:%s\n%s:latest\n' "$IMG" "$VERSION" "$IMG" "${VERSION%.*}" "$IMG" >> "$GITHUB_OUTPUT"
+          TAGS="$IMG:$VERSION"
+          # stable releases also move latest + major.minor; pre-releases get version only
+          if ! echo "$VERSION" | grep -qE '-'; then
+            TAGS="$TAGS,$IMG:${VERSION%.*},$IMG:latest"
           fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
       - uses: azure/setup-helm@v4
