@@ -39,7 +39,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "instant": true
         }
       ]
@@ -56,7 +56,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[1h]))",
           "instant": true
         }
       ]
@@ -73,7 +73,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range])) - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[1h])) - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "instant": true
         }
       ]
@@ -90,7 +90,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "100 * (1 - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range])) / sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range])))",
+          "expr": "100 * (1 - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h])) / sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[1h])))",
           "instant": true
         }
       ]
@@ -106,7 +106,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (provider) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum by (provider) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "legendFormat": "{{provider}}",
           "instant": true
         }
@@ -123,7 +123,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum by (service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "legendFormat": "{{service}}",
           "instant": true
         }
@@ -140,7 +140,7 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (billing_account) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum by (billing_account) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "legendFormat": "{{billing_account}}",
           "instant": true
         }
@@ -218,14 +218,14 @@
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (provider, service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum by (provider, service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "A"
         },
         {
           "datasource": "${datasource}",
-          "expr": "sum by (provider, service) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "expr": "sum by (provider, service) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[1h]))",
           "format": "table",
           "instant": true,
           "refId": "B"
