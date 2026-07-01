@@ -16,4 +16,9 @@ spec:
     - port: http
       path: /metrics
       interval: {{ .Values.serviceMonitor.interval }}
+      # ducat's own labels (provider, service, billing_account) must win over the
+      # target labels the Prometheus Operator stamps , notably `service`, which
+      # would otherwise be overwritten by the Kubernetes Service name and collapse
+      # every provider's per-service breakdown into one bucket.
+      honorLabels: {{ .Values.serviceMonitor.honorLabels }}
 {{- end }}

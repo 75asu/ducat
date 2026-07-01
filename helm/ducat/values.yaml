@@ -51,6 +51,10 @@ serviceMonitor:
   enabled: false               # set true on a Prometheus-Operator cluster (serve mode)
   interval: 1h
   labels: {}
+  # Keep ducat's exposed labels (provider/service/billing_account) over the
+  # target labels Prometheus stamps; `service` collides with the k8s Service
+  # name otherwise. Almost always want this true for this exporter.
+  honorLabels: true
 
 # Ship the Grafana dashboard as a sidecar-labeled ConfigMap (auto-imported by the
 # Grafana kiwigrid sidecar). Set folder to drop it into an RBAC-restricted folder.
