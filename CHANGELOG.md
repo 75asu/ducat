@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1](https://github.com/75asu/ducat/compare/v0.2.0...v0.2.1) (2026-07-01)
+
+
+### Bug Fixes
+
+* bound dashboard snapshot queries to a 1h window so stale series do not double-count ([aa88915](https://github.com/75asu/ducat/commit/aa88915cf08339a26591141e0997ea7b5e1a2c46))
+* set ServiceMonitor honorLabels so provider/service labels survive the operator's target labels ([91e2187](https://github.com/75asu/ducat/commit/91e2187a2be179a15ca2b1f1ad8d490ad626a5bf))
+
 ## [0.2.0](https://github.com/75asu/ducat/compare/v0.1.0...v0.2.0) (2026-07-01)
 
 
