@@ -34,7 +34,7 @@
         "includeAll": false,
         "multi": false,
         "sort": 2,
-        "refresh": 2,
+        "refresh": 1,
         "current": {}
       },
       {
@@ -135,18 +135,25 @@
     },
     {
       "id": 7,
-      "type": "barchart",
-      "title": "Spend by month (list cost)",
-      "description": "Consumed value per billing month across all providers selected. This is the monthly history , pick a month above to drill in.",
+      "type": "table",
+      "title": "Spend by month , per provider (list cost, all months)",
+      "description": "Consumed value per billing month across the selected providers , the monthly history. Pick a month above to drill into services/accounts.",
       "datasource": "${datasource}",
       "gridPos": { "h": 9, "w": 24, "x": 0, "y": 12 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "palette-classic" } } },
-      "options": { "xField": "month", "orientation": "vertical", "showValue": "auto", "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 } },
       "transformations": [
-        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "List (USD)" } } }
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "indexByName": { "month": 0, "provider": 1, "Value": 2 },
+            "renameByName": { "month": "Month", "provider": "Provider", "Value": "List (USD)" }
+          }
+        },
+        { "id": "sortBy", "options": { "fields": {}, "sort": [{ "field": "Month", "desc": true }] } }
       ],
       "targets": [
-        { "datasource": "${datasource}", "expr": "sum by (month) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window]))", "format": "table", "instant": true }
+        { "datasource": "${datasource}", "expr": "sum by (month, provider) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window]))", "format": "table", "instant": true }
       ]
     },
     {
