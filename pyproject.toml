@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ducat"
-version = "0.2.1"
+version = "0.3.0"
 description = "One cost view across every provider: cloud, SaaS, and AI spend, normalized on FOCUS and exported to Prometheus/Grafana."
 readme = "README.md"
 license = "Apache-2.0"
