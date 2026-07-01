@@ -2,8 +2,8 @@ apiVersion: v2
 name: ducat
 description: One cost view across every provider , cloud, SaaS, and AI spend to Prometheus/Grafana.
 type: application
-version: 0.1.0 # x-release-please-version
-appVersion: "0.1.0" # x-release-please-version
+version: 0.2.0 # x-release-please-version
+appVersion: "0.2.0" # x-release-please-version
 home: https://github.com/75asu/ducat
 sources:
   - https://github.com/75asu/ducat
