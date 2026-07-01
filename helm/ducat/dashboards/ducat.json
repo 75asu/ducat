@@ -30,41 +30,130 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Total spend (selected period)",
+      "title": "Total spend (net)",
+      "description": "Billed cost after discounts, latest snapshot in the selected range.",
       "datasource": "${datasource}",
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "green" } } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum(ducat_cost_usd{provider=~\"$provider\"})",
+          "expr": "sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
           "instant": true
         }
       ]
     },
     {
       "id": 2,
-      "type": "piechart",
-      "title": "Spend by provider",
+      "type": "stat",
+      "title": "List cost (pre-discount)",
+      "description": "Public-rate cost before any discounts, latest snapshot in the selected range.",
       "datasource": "${datasource}",
-      "gridPos": { "h": 9, "w": 9, "x": 6, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "text" } } },
+      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (provider) (ducat_cost_usd{provider=~\"$provider\"})",
-          "legendFormat": "{{provider}}",
+          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range]))",
           "instant": true
         }
       ]
     },
     {
       "id": 3,
+      "type": "stat",
+      "title": "Savings vs list",
+      "description": "List cost minus net cost , the discount value captured.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range])) - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Effective discount",
+      "description": "1 - net/list, as a percentage.",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "blue" } } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "100 * (1 - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range])) / sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range])))",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "piechart",
+      "title": "Spend by provider",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (provider) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "{{provider}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "piechart",
+      "title": "Spend by service",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "{{service}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "piechart",
+      "title": "Spend by account",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (billing_account) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "legendFormat": "{{billing_account}}",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "id": 8,
       "type": "timeseries",
       "title": "Spend over time by provider",
       "datasource": "${datasource}",
-      "gridPos": { "h": 9, "w": 9, "x": 15, "y": 0 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "bars", "stacking": { "mode": "normal" } } } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15, "showPoints": "always", "pointSize": 6, "spanNulls": true, "stacking": { "mode": "none" } } } },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "targets": [
         {
           "datasource": "${datasource}",
@@ -74,21 +163,72 @@
       ]
     },
     {
-      "id": 4,
-      "type": "table",
-      "title": "Spend by service",
+      "id": 9,
+      "type": "timeseries",
+      "title": "Net vs list over time",
+      "description": "Divergence between the two lines is the discount captured over time.",
       "datasource": "${datasource}",
-      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 9 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "showPoints": "always", "pointSize": 6, "spanNulls": true } } },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "targets": [
+        {
+          "datasource": "${datasource}",
+          "expr": "sum(ducat_cost_usd{provider=~\"$provider\"})",
+          "legendFormat": "Net"
+        },
+        {
+          "datasource": "${datasource}",
+          "expr": "sum(ducat_list_cost_usd{provider=~\"$provider\"})",
+          "legendFormat": "List"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "Spend by service (net / list / savings)",
+      "datasource": "${datasource}",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 } },
       "transformations": [
-        { "id": "organize", "options": { "excludeByName": { "Time": true } } }
+        { "id": "merge", "options": {} },
+        {
+          "id": "calculateField",
+          "options": {
+            "alias": "Savings (USD)",
+            "mode": "binary",
+            "binary": { "left": "Value #B", "operator": "-", "right": "Value #A" },
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": {
+              "provider": "Provider",
+              "service": "Service",
+              "Value #A": "Net (USD)",
+              "Value #B": "List (USD)"
+            }
+          }
+        }
       ],
       "targets": [
         {
           "datasource": "${datasource}",
-          "expr": "sum by (provider, service) (ducat_cost_usd{provider=~\"$provider\"})",
+          "expr": "sum by (provider, service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$__range]))",
           "format": "table",
-          "instant": true
+          "instant": true,
+          "refId": "A"
+        },
+        {
+          "datasource": "${datasource}",
+          "expr": "sum by (provider, service) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$__range]))",
+          "format": "table",
+          "instant": true,
+          "refId": "B"
         }
       ]
     }
