@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/75asu/ducat/compare/v0.1.0...v0.2.0) (2026-07-01)
+
+
+### Features
+
+* add AWS Cost Explorer and Cloudflare cost adapters ([a11b9d5](https://github.com/75asu/ducat/commit/a11b9d5185b5584f525ceda21d8e2d55b50045a1))
+
+
+### Bug Fixes
+
+* show data on all dashboard panels; add list-cost, savings, by-account and by-service views ([c2652a6](https://github.com/75asu/ducat/commit/c2652a678e294090587228096990271c89035990))
+
 ## 0.1.0 (2026-06-30)
 
 
