@@ -31,11 +31,30 @@ def test_aggregate_by_period_splits_months():
     assert agg[(("github", "acme", "copilot", "USD"), date(2026, 5, 1))] == (12.0, 12.0)
 
 
-def test_build_registry_exposes_both_gauges():
+def test_build_registry_buckets_by_month():
     reg = build_registry(_rows())
-    labels = {"provider": "github", "billing_account": "acme", "service": "copilot", "currency": "USD"}
-    assert reg.get_sample_value(METRIC_NET, labels) == 27.0
-    assert reg.get_sample_value(METRIC_LIST, labels) == 27.0
-    actions = {**labels, "service": "actions"}
+    # billing_account_name falls back to billing_account ("acme"); series are
+    # split per month so June copilot (10+5) and May copilot (12) are distinct.
+    base = {
+        "provider": "github",
+        "billing_account": "acme",
+        "billing_account_name": "acme",
+        "service": "copilot",
+        "currency": "USD",
+    }
+    jun = {**base, "month": "2026-06"}
+    may = {**base, "month": "2026-05"}
+    assert reg.get_sample_value(METRIC_NET, jun) == 15.0
+    assert reg.get_sample_value(METRIC_LIST, jun) == 15.0
+    assert reg.get_sample_value(METRIC_NET, may) == 12.0
+    actions = {**base, "service": "actions", "month": "2026-06"}
     assert reg.get_sample_value(METRIC_NET, actions) == 0.0
     assert reg.get_sample_value(METRIC_LIST, actions) == 40.0
+
+
+def test_build_registry_uses_account_name():
+    reg = build_registry([CostRow("aws", "111122223333", "EC2", 0.0, date(2026, 6, 1),
+                                  list_cost=50.0, billing_account_name="india1")])
+    labels = {"provider": "aws", "billing_account": "111122223333", "billing_account_name": "india1",
+              "service": "EC2", "currency": "USD", "month": "2026-06"}
+    assert reg.get_sample_value(METRIC_LIST, labels) == 50.0

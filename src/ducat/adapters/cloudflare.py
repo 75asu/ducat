@@ -51,13 +51,17 @@ class CloudflareAdapter:
         base = opts.get("api_base", _API).rstrip("/")
         headers = {"Authorization": f"Bearer {token}"}
         today = _dt.date.today()
+        account_names = opts.get("account_names", {}) or {}
+        account_name = str(account_names.get(str(account), account))
 
         rows: list[CostRow] = []
-        rows.extend(self._subscriptions(base, str(account), headers, today))
-        rows.extend(self._billable_usage(base, str(account), headers, opts, today))
+        rows.extend(self._subscriptions(base, str(account), account_name, headers, today))
+        rows.extend(self._billable_usage(base, str(account), account_name, headers, opts, today))
         return rows
 
-    def _subscriptions(self, base: str, account: str, headers: dict, today: _dt.date) -> list[CostRow]:
+    def _subscriptions(
+        self, base: str, account: str, account_name: str, headers: dict, today: _dt.date
+    ) -> list[CostRow]:
         resp = httpx.get(f"{base}/accounts/{account}/subscriptions", headers=headers, timeout=30.0)
         if resp.status_code in (401, 403):
             raise RuntimeError(
@@ -73,6 +77,7 @@ class CloudflareAdapter:
                 CostRow(
                     provider="cloudflare",
                     billing_account=account,
+                    billing_account_name=account_name,
                     service=str(rate_plan.get("id") or "subscription"),
                     billed_cost=price,
                     list_cost=price,  # subscriptions have no separate list price
@@ -84,7 +89,7 @@ class CloudflareAdapter:
         return rows
 
     def _billable_usage(
-        self, base: str, account: str, headers: dict, opts: dict[str, Any], today: _dt.date
+        self, base: str, account: str, account_name: str, headers: dict, opts: dict[str, Any], today: _dt.date
     ) -> list[CostRow]:
         params = {
             "from": opts.get("from") or _dt.date(today.year, 1, 1).isoformat(),
@@ -111,6 +116,7 @@ class CloudflareAdapter:
                 CostRow(
                     provider="cloudflare",
                     billing_account=str(r.get("BillingAccountId") or account),
+                    billing_account_name=str(r.get("BillingAccountName") or account_name),
                     service=str(r.get("x_ProductFamilyName") or "unknown"),
                     billed_cost=billed,
                     list_cost=listc,

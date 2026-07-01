@@ -39,6 +39,9 @@ class CostRow:
     period_start: date
     currency: str = "USD"
     list_cost: float = 0.0  # FOCUS ListCost: pre-discount / public-rate cost
+    # FOCUS BillingAccountName: human-friendly account/project name. Falls back to
+    # billing_account (the id) when an adapter can't resolve a name.
+    billing_account_name: str = ""
     sub_account: str | None = None
     region: str | None = None
     sku: str | None = None

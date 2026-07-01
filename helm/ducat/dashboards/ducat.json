@@ -25,9 +25,22 @@
         "current": { "text": "All", "value": "$__all" }
       },
       {
+        "name": "month",
+        "label": "Month",
+        "description": "Which billing month the snapshot panels show. ducat exposes every month as a label, so this filters without any time-range change.",
+        "type": "query",
+        "datasource": "${datasource}",
+        "query": "label_values(ducat_cost_usd, month)",
+        "includeAll": false,
+        "multi": false,
+        "sort": 2,
+        "refresh": 2,
+        "current": {}
+      },
+      {
         "name": "window",
         "label": "Snapshot window",
-        "description": "How far back the snapshot panels look for the latest cost sample. Raise it above your scrape interval; lower it to drop stale series faster.",
+        "description": "How far back the snapshot panels look for the latest scrape. Raise above the scrape interval.",
         "type": "custom",
         "query": "5m,15m,30m,1h,6h,24h",
         "current": { "text": "1h", "value": "1h" },
@@ -47,184 +60,115 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Total spend (net)",
-      "description": "Billed cost after discounts, latest snapshot in the selected range.",
+      "title": "Total spend (net) , $month",
+      "description": "Billed cost after discounts/credits for the selected month.",
       "datasource": "${datasource}",
       "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "green" } } },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum(last_over_time(ducat_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "instant": true }
       ]
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "List cost (pre-discount)",
-      "description": "Public-rate cost before any discounts, latest snapshot in the selected range.",
+      "title": "List cost (pre-discount) , $month",
+      "description": "Public-rate / consumed value for the selected month (what the spend is worth before credits/discounts).",
       "datasource": "${datasource}",
       "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "text" } } },
-      "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window]))",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "instant": true }
       ]
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Savings vs list",
-      "description": "List cost minus net cost , the discount value captured.",
+      "title": "Savings vs list , $month",
+      "description": "List minus net , the discount/credit value captured.",
       "datasource": "${datasource}",
       "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2, "color": { "mode": "fixed", "fixedColor": "blue" } } },
       "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window])) - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window])) - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "instant": true }
       ]
     },
     {
       "id": 4,
       "type": "stat",
-      "title": "Effective discount",
-      "description": "1 - net/list, as a percentage.",
+      "title": "Effective discount , $month",
       "datasource": "${datasource}",
       "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
       "fieldConfig": { "defaults": { "unit": "percent", "decimals": 1, "color": { "mode": "fixed", "fixedColor": "blue" } } },
       "options": { "colorMode": "value", "graphMode": "none", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "100 * (1 - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window])) / sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window])))",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "100 * (1 - sum(last_over_time(ducat_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window])) / sum(last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window])))", "instant": true }
       ]
     },
     {
       "id": 5,
       "type": "piechart",
-      "title": "Spend by provider",
+      "title": "Spend by provider , $month",
       "datasource": "${datasource}",
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
       "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (provider) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "legendFormat": "{{provider}}",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum by (provider) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "legendFormat": "{{provider}}", "instant": true }
       ]
     },
     {
       "id": 6,
       "type": "piechart",
-      "title": "Spend by service",
+      "title": "Spend by account , $month",
+      "description": "By friendly account/project name (falls back to id).",
       "datasource": "${datasource}",
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
       "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "legendFormat": "{{service}}",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum by (billing_account_name) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "legendFormat": "{{billing_account_name}}", "instant": true }
       ]
     },
     {
       "id": 7,
-      "type": "piechart",
-      "title": "Spend by account",
+      "type": "barchart",
+      "title": "Spend by month (list cost)",
+      "description": "Consumed value per billing month across all providers selected. This is the monthly history , pick a month above to drill in.",
       "datasource": "${datasource}",
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD" } },
-      "options": { "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 12 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "color": { "mode": "palette-classic" } } },
+      "options": { "xField": "month", "orientation": "vertical", "showValue": "auto", "legend": { "showLegend": true, "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "List (USD)" } } }
+      ],
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (billing_account) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "legendFormat": "{{billing_account}}",
-          "instant": true
-        }
+        { "datasource": "${datasource}", "expr": "sum by (month) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window]))", "format": "table", "instant": true }
       ]
     },
     {
       "id": 8,
-      "type": "timeseries",
-      "title": "Spend over time by provider",
-      "datasource": "${datasource}",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 15, "showPoints": "always", "pointSize": 6, "spanNulls": true, "stacking": { "mode": "none" } } } },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (provider) (ducat_cost_usd{provider=~\"$provider\"})",
-          "legendFormat": "{{provider}}"
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "type": "timeseries",
-      "title": "Net vs list over time",
-      "description": "Divergence between the two lines is the discount captured over time.",
-      "datasource": "${datasource}",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
-      "fieldConfig": { "defaults": { "unit": "currencyUSD", "custom": { "drawStyle": "line", "lineInterpolation": "smooth", "lineWidth": 2, "fillOpacity": 10, "showPoints": "always", "pointSize": 6, "spanNulls": true } } },
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum(ducat_cost_usd{provider=~\"$provider\"})",
-          "legendFormat": "Net"
-        },
-        {
-          "datasource": "${datasource}",
-          "expr": "sum(ducat_list_cost_usd{provider=~\"$provider\"})",
-          "legendFormat": "List"
-        }
-      ]
-    },
-    {
-      "id": 10,
       "type": "table",
-      "title": "Spend by service (net / list / savings)",
+      "title": "Spend by service , $month (net / list / savings)",
       "datasource": "${datasource}",
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 20 },
+      "gridPos": { "h": 11, "w": 24, "x": 0, "y": 21 },
       "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 2 } },
       "transformations": [
         { "id": "merge", "options": {} },
         {
           "id": "calculateField",
-          "options": {
-            "alias": "Savings (USD)",
-            "mode": "binary",
-            "binary": { "left": "Value #B", "operator": "-", "right": "Value #A" },
-            "replaceFields": false
-          }
+          "options": { "alias": "Savings (USD)", "mode": "binary", "binary": { "left": "Value #B", "operator": "-", "right": "Value #A" }, "replaceFields": false }
         },
         {
           "id": "organize",
           "options": {
-            "excludeByName": { "Time": true },
+            "excludeByName": { "Time": true, "month": true },
             "renameByName": {
               "provider": "Provider",
+              "billing_account_name": "Account",
               "service": "Service",
               "Value #A": "Net (USD)",
               "Value #B": "List (USD)"
@@ -233,20 +177,8 @@
         }
       ],
       "targets": [
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (provider, service) (last_over_time(ducat_cost_usd{provider=~\"$provider\"}[$window]))",
-          "format": "table",
-          "instant": true,
-          "refId": "A"
-        },
-        {
-          "datasource": "${datasource}",
-          "expr": "sum by (provider, service) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\"}[$window]))",
-          "format": "table",
-          "instant": true,
-          "refId": "B"
-        }
+        { "datasource": "${datasource}", "expr": "sum by (provider, billing_account_name, service) (last_over_time(ducat_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "format": "table", "instant": true, "refId": "A" },
+        { "datasource": "${datasource}", "expr": "sum by (provider, billing_account_name, service) (last_over_time(ducat_list_cost_usd{provider=~\"$provider\",month=\"$month\"}[$window]))", "format": "table", "instant": true, "refId": "B" }
       ]
     }
   ]

@@ -66,6 +66,9 @@ class AwsAdapter:
         # Set to null/[] in config to treat every record type as usage.
         usage_record_types = opts.get("usage_record_types", ["Usage"])
         account_fallback = str(opts.get("account", ""))
+        # Optional {account_id: friendly_name} map so multi-account views are
+        # readable (Cost Explorer returns ids, not names). Falls back to the id.
+        account_names = opts.get("account_names", {}) or {}
 
         base: dict[str, Any] = {
             "TimePeriod": {"Start": start, "End": end},
@@ -94,6 +97,7 @@ class AwsAdapter:
                 CostRow(
                     provider="aws",
                     billing_account=account,
+                    billing_account_name=str(account_names.get(account, account)),
                     service=service,
                     billed_cost=billed_cost,
                     list_cost=list_cost,

@@ -38,22 +38,15 @@ def _fetch_all(cfg: Config) -> list:
     return rows
 
 
-def _current_month(rows: list) -> list:
-    """Scrape mode shows a current snapshot, so keep only the latest month's rows
-    (adapters may return a full-year history for the time-series push path)."""
-    if not rows:
-        return rows
-    latest = max(r.period_start for r in rows)
-    return [r for r in rows if (r.period_start.year, r.period_start.month) == (latest.year, latest.month)]
-
-
 def serve(cfg: Config, port: int = 9090, interval: int = 3600) -> None:
     refresher = _Refresher()
     REGISTRY.register(refresher)
 
     def _tick() -> None:
         try:
-            refresher.refresh(_current_month(_fetch_all(cfg)))
+            # All months: build_registry buckets them under the `month` label so a
+            # single scrape exposes the full history for Grafana to slice.
+            refresher.refresh(_fetch_all(cfg))
         except Exception as exc:  # keep serving last-good values on a blip
             print(f"ducat: refresh failed: {exc}", flush=True)
 

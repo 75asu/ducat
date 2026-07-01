@@ -91,6 +91,7 @@ class GithubAdapter:
                 CostRow(
                     provider="github",
                     billing_account=str(org),
+                    billing_account_name=str(org),  # the org slug is already the name
                     service=str(it.get("product", "unknown")),
                     sku=it.get("sku"),
                     billed_cost=net,
