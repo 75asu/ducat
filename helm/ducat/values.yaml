@@ -24,6 +24,13 @@ config:
       enabled: true
       org: my-org
       token_env: GITHUB_TOKEN
+    # aws:                       # needs ce:GetCostAndUsage; creds via the ambient chain
+    #   enabled: true            # (IRSA / OIDC role / env). Services auto-detected.
+    #   # usage_record_types: ["Usage"]   # show consumed value on credit-funded accounts
+    # cloudflare:
+    #   enabled: true
+    #   account_id: "<cf-account-id>"
+    #   token_env: CLOUDFLARE_API_TOKEN   # account token with Billing: Read
   sink:
     remote_write:
       url: ""                  # required for cronjob mode

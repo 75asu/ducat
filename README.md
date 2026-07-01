@@ -46,8 +46,8 @@ Adding a provider is one file implementing `fetch(opts) -> list[CostRow]`. Nothi
 | Provider | Status | Source | Auth |
 |---|---|---|---|
 | GitHub | ✅ | Enhanced billing usage API (`netAmount`) | fine-grained PAT, org `Administration: read` |
-| Cloudflare | 🚧 next | `paygo-usage` + `subscriptions` | API token with `Billing Read` |
-| AWS | 🔜 | Cost Explorer `GetCostAndUsage` | keyless (OIDC / assume-role) |
+| AWS | ✅ | Cost Explorer `GetCostAndUsage` (usage + invoice; auto-detects services) | keyless (ambient chain: env / profile / IRSA / OIDC) |
+| Cloudflare | ✅ | `subscriptions` (recurring) + `billable/usage` v2 (native FOCUS, when enabled) | account API token, `Billing: Read` |
 | GCP (incl. Vertex/Gemini) | 🔜 | BigQuery billing export | keyless (Workload Identity) |
 | OpenAI | 🔜 | `/v1/organization/costs` | admin key |
 | Anthropic | 🔜 | `/v1/organizations/cost_report` | admin key |
