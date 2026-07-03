@@ -9,8 +9,9 @@ venv/
 .pytest_cache/
 .ruff_cache/
 
-# Local config / secrets , never commit a real one
-config.yaml
-config.local.yaml
+# Local config / secrets , never commit a real one. Root-anchored so the tracked
+# template examples/config.yaml (referenced by the README) is NOT swept up.
+/config.yaml
+/config.local.yaml
 .env
 *.local.yaml
