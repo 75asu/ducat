@@ -1,0 +1,65 @@
+# ducat config , declares which providers to pull and where to push.
+#
+# Onboarding is entirely config-driven: list ONLY the providers you want under
+# `providers` (anything absent or `enabled: false` is never called), and each
+# declares its own credentials by reference. Secrets are NEVER in this file , a
+# provider names an env var (token_env) or an ambient credential source, and the
+# value is read at runtime. Safe to commit.
+
+providers:
+  github:
+    enabled: true
+    org: my-org              # the GitHub org whose spend to read
+    token_env: GITHUB_TOKEN  # fine-grained PAT with org "Administration: read"
+    # api_version: "2022-11-28"   # bump if GitHub moves the billing endpoint
+
+  # aws:                     # cost via Cost Explorer (needs the 'aws' extra + ce:GetCostAndUsage)
+  #   enabled: true
+  #   profile: my-sso-profile          # omit to use the ambient chain (env vars / IRSA / OIDC role)
+  #   # region: us-east-1              # Cost Explorer endpoint (fixed default)
+  #   # granularity: MONTHLY           # or DAILY
+  #   # Services + accounts are auto-detected (grouped dynamically) , nothing to
+  #   # maintain when you start using a new service.
+  #   # usage_record_types: ["Usage"]  # default. Consumption excludes Credit/Refund/Tax so a
+  #   #                                # credit-funded account still shows what it consumed.
+  #   #                                # Set to null to count every record type (pure invoice view).
+  #   # list_metric: UnblendedCost     # -> list_cost   (what you used, at rate)
+  #   # net_metric: NetUnblendedCost   # -> billed_cost (what you pay, after credits/discounts)
+  #   # from: 2026-01-01               # default: Jan 1 this year (full month-by-month history)
+  #   # to:   2026-07-01               # default: today
+  #   #
+  #   # --- Account topology: pick ONE ---
+  #   # A) Single principal (the default above): one credential set. A payer /
+  #   #    management (or delegated billing-admin) principal sees ALL linked
+  #   #    accounts, split by LINKED_ACCOUNT; a plain member account sees itself.
+  #   #    account_names maps ids -> friendly labels for that combined view:
+  #   #   account_names: { "111122223333": prod, "444455556666": staging }
+  #   #
+  #   # B) Per-account: one credential set PER account , for when no single
+  #   #    principal can see the whole org (you only have access to your own
+  #   #    accounts). Each entry auths independently and its rows are tagged with
+  #   #    its id/name. Auth precedence: static env keys -> profile -> role_arn.
+  #   #   accounts:
+  #   #     - id: "111122223333"
+  #   #       name: prod
+  #   #       access_key_id_env: AWS_ACCESS_KEY_ID_PROD          # static keys, one pair per account
+  #   #       secret_access_key_env: AWS_SECRET_ACCESS_KEY_PROD
+  #   #     - id: "444455556666"
+  #   #       name: staging
+  #   #       role_arn: arn:aws:iam::444455556666:role/ducat-ce-reader   # or assume a role
+  #   #     - id: "777788889999"
+  #   #       name: sandbox
+  #   #       profile: sandbox-sso                               # or a named ~/.aws profile
+
+  # cloudflare:              # (next adapter)
+  #   enabled: true
+  #   account_id: "<cf-account-id>"
+  #   token_env: CLOUDFLARE_API_TOKEN   # token with "Billing Read" (Pay-as-you-go accounts)
+
+# Where one-shot `ducat run` pushes dated samples. Omit to use scrape mode only.
+sink:
+  remote_write:
+    url: http://localhost:9009/api/v1/push
+    tenant: default          # X-Scope-OrgID (multi-tenant Mimir/Cortex)
+    # username: <user>
+    # password_env: MIMIR_PASSWORD

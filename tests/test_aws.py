@@ -1,6 +1,8 @@
 import sys
 import types
 
+import pytest
+
 from ducat.adapters.aws import AwsAdapter
 
 # One month, three services. boto3 is stubbed (below) so this runs without the
@@ -50,17 +52,38 @@ class _FakeCE:
         return _SAMPLE
 
 
+class _FakeSTS:
+    calls: list = []
+
+    def assume_role(self, **kwargs):
+        _FakeSTS.calls.append(kwargs)
+        return {
+            "Credentials": {
+                "AccessKeyId": "ASIA_TEMP",
+                "SecretAccessKey": "temp-secret",
+                "SessionToken": "temp-token",
+            }
+        }
+
+
 class _FakeSession:
+    #: records the kwargs each Session was built with (per-account cred assertions)
+    sessions: list = []
+
     def __init__(self, *a, **k):
-        pass
+        _FakeSession.sessions.append(k)
 
     def client(self, name, region_name=None):
+        if name == "sts":
+            return _FakeSTS()
         assert name == "ce"
         return _FakeCE()
 
 
 def _stub_boto3(monkeypatch):
     _FakeCE.calls = []
+    _FakeSTS.calls = []
+    _FakeSession.sessions = []
     fake = types.ModuleType("boto3")
     fake.Session = _FakeSession
     monkeypatch.setitem(sys.modules, "boto3", fake)
@@ -100,3 +123,61 @@ def test_usage_record_types_configurable(monkeypatch):
     AwsAdapter().fetch({"usage_record_types": None})  # null -> every record type is "usage"
     consumption = _FakeCE.calls[0]
     assert "Filter" not in consumption
+
+
+# ---- per-account mode (no single org-wide principal) -------------------------
+
+
+def test_per_account_static_creds(monkeypatch):
+    _stub_boto3(monkeypatch)
+    monkeypatch.setenv("AK_A", "keyA")
+    monkeypatch.setenv("SK_A", "secA")
+    monkeypatch.setenv("AK_B", "keyB")
+    monkeypatch.setenv("SK_B", "secB")
+    rows = AwsAdapter().fetch(
+        {
+            "accounts": [
+                {"id": "111111111111", "name": "acct-a", "access_key_id_env": "AK_A", "secret_access_key_env": "SK_A"},
+                {"id": "222222222222", "name": "acct-b", "access_key_id_env": "AK_B", "secret_access_key_env": "SK_B"},
+            ]
+        }
+    )
+    # force_account tags each account's rows with the CONFIGURED id (not the
+    # sample's LINKED_ACCOUNT), and account_names labels them.
+    assert {r.billing_account for r in rows} == {"111111111111", "222222222222"}
+    names = {r.billing_account: r.billing_account_name for r in rows}
+    assert names["111111111111"] == "acct-a"
+    assert names["222222222222"] == "acct-b"
+    # 2 non-zero services x 2 accounts = 4 rows.
+    assert len(rows) == 4
+    # each account built its own Session with its own static creds.
+    used_keys = {s.get("aws_access_key_id") for s in _FakeSession.sessions}
+    assert {"keyA", "keyB"} <= used_keys
+    # two accounts -> two dual queries = 4 CE calls.
+    assert len(_FakeCE.calls) == 4
+
+
+def test_per_account_missing_env_errors(monkeypatch):
+    _stub_boto3(monkeypatch)
+    with pytest.raises(RuntimeError, match="static creds"):
+        AwsAdapter().fetch(
+            {"accounts": [{"id": "1", "access_key_id_env": "NOPE_AK", "secret_access_key_env": "NOPE_SK"}]}
+        )
+
+
+def test_per_account_assume_role(monkeypatch):
+    _stub_boto3(monkeypatch)
+    rows = AwsAdapter().fetch(
+        {"accounts": [{"id": "333333333333", "name": "assumed", "role_arn": "arn:aws:iam::333333333333:role/ce-reader"}]}
+    )
+    assert {r.billing_account for r in rows} == {"333333333333"}
+    # the base session assumed the configured role, then a session was built from
+    # the returned temp creds.
+    assert any(c.get("RoleArn", "").endswith("role/ce-reader") for c in _FakeSTS.calls)
+    assert any(s.get("aws_session_token") == "temp-token" for s in _FakeSession.sessions)
+
+
+def test_per_account_no_auth_errors(monkeypatch):
+    _stub_boto3(monkeypatch)
+    with pytest.raises(RuntimeError, match="no auth configured"):
+        AwsAdapter().fetch({"accounts": [{"id": "1", "name": "orphan"}]})
