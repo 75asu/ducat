@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/75asu/ducat/compare/v0.3.0...v0.4.0) (2026-07-03)
+
+
+### Features
+
+* **aws:** per-account credentials for multi-account cost ([713f9d8](https://github.com/75asu/ducat/commit/713f9d875fdc0674573b0b86f18b3bd1bbaa6848))
+
+
+### Bug Fixes
+
+* root-anchor local config ignore so examples/config.yaml is tracked ([8fd942b](https://github.com/75asu/ducat/commit/8fd942b5892cf346ef51ff1cd2de46e62d35d6ea))
+
 ## [0.3.0](https://github.com/75asu/ducat/compare/v0.2.1...v0.3.0) (2026-07-01)
 
 
