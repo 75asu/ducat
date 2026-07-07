@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --bg:#0d141d; --ink:#e7eef5; --mut:#8a99a8; --faint:#55636f; --net:#34e3a2; --list:#f0b429; }
+    body {
+      width: 1200px; height: 627px; overflow: hidden;
+      background: var(--bg);
+      background-image: radial-gradient(900px 460px at 82% -10%, rgba(52,227,162,0.10), transparent 70%);
+      font-family: 'Space Grotesk', sans-serif; color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      padding: 72px 80px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 18px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--mut); }
+    .wordmark { font-weight: 700; font-size: 168px; line-height: 0.9; letter-spacing: -0.03em; }
+    .tagline { font-weight: 500; font-size: 42px; margin-top: 6px; }
+    .tagline .net { color: var(--net); }
+    .metrics { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: var(--faint); margin-top: 30px; }
+    .metrics .net { color: var(--net); } .metrics .list { color: var(--list); } .metrics .arw { color: var(--mut); }
+    .bot { display: flex; justify-content: space-between; align-items: baseline; }
+    .bot .pipe { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--mut); }
+    .bot .pipe .net { color: var(--net); }
+    .bot .url { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: var(--net); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="eyebrow">open source · finops · apache-2.0</div>
+  <div>
+    <div class="wordmark">ducat</div>
+    <div class="tagline">one <span class="net">cost view</span> across every provider</div>
+    <div class="metrics">list <span class="list">$23,904</span> <span class="arw">→</span> net <span class="net">$18,016</span> <span class="arw">·</span> commitments saved <span class="net">$5,888</span></div>
+  </div>
+  <div class="bot">
+    <div class="pipe">cloud · SaaS · AI <span class="net">→</span> FOCUS <span class="net">→</span> Prometheus / Grafana</div>
+    <div class="url">github.com/75asu/ducat</div>
+  </div>
+</body>
+</html>

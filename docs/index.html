@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ducat — one cost view across every provider</title>
+  <meta name="description" content="Cloud, SaaS, and AI spend, normalized on the FinOps FOCUS spec and exported to Prometheus / Grafana. Small per-provider adapters, two metrics, no platform. Open source, Apache-2.0." />
+  <link rel="canonical" href="https://75asu.github.io/ducat" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  <meta property="og:site_name" content="ducat" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="ducat — one cost view across every provider" />
+  <meta property="og:description" content="Cloud, SaaS, and AI spend, normalized on the FinOps FOCUS spec and exported to Prometheus / Grafana. Small per-provider adapters, two metrics, no platform." />
+  <meta property="og:url" content="https://75asu.github.io/ducat" />
+  <meta property="og:image" content="https://75asu.github.io/ducat/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="627" />
+  <meta property="og:locale" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ducat — one cost view across every provider" />
+  <meta name="twitter:description" content="Cloud, SaaS, and AI spend normalized to FOCUS, exported to Prometheus / Grafana. Open source, Apache-2.0." />
+  <meta name="twitter:image" content="https://75asu.github.io/ducat/og.png" />
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230e1621'/><rect x='26' y='52' width='11' height='22' rx='2' fill='%2334e3a2'/><rect x='45' y='38' width='11' height='36' rx='2' fill='%2334e3a2'/><rect x='64' y='26' width='11' height='48' rx='2' fill='%23f0b429'/></svg>" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d141d;
+      --panel:   #131c27;
+      --panel-2: #0f1822;
+      --ink:     #e7eef5;
+      --mut:     #8a99a8;
+      --faint:   #55636f;
+      --line:    rgba(255,255,255,0.08);
+      --net:     #34e3a2;   /* net / billed cost */
+      --net-dim: rgba(52,227,162,0.12);
+      --list:    #f0b429;   /* list / pre-discount */
+      --disp: 'Space Grotesk', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+    html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+    body {
+      background: var(--bg); color: var(--ink);
+      font-family: var(--disp); font-size: 16px; line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      background-image: radial-gradient(1100px 500px at 78% -8%, rgba(52,227,162,0.06), transparent 70%);
+    }
+    a { color: var(--net); text-decoration: none; }
+    a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 26px; }
+
+    /* hero */
+    .hero { padding: 74px 0 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .eyebrow { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mut); margin-bottom: 20px; }
+    .wordmark { font-family: var(--disp); font-weight: 700; font-size: clamp(64px, 9vw, 104px); line-height: 0.92; letter-spacing: -0.03em; color: var(--ink); margin-bottom: 14px; }
+    .tagline { font-size: 20px; font-weight: 500; color: var(--ink); margin-bottom: 18px; line-height: 1.3; }
+    .tagline .net { color: var(--net); }
+    .pitch { font-size: 14.5px; color: var(--mut); line-height: 1.7; max-width: 420px; }
+    .pitch .hi { color: var(--ink); }
+    .cta { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; font-family: var(--mono); font-size: 13px; }
+    .cta a.btn { color: var(--bg); background: var(--net); padding: 9px 16px; border-radius: 8px; font-weight: 600; }
+    .cta a.btn:hover { text-decoration: none; opacity: 0.9; }
+    .cta a.ghost { color: var(--ink); }
+    .cta a.ghost:hover { color: var(--net); text-decoration: none; }
+    .cta .ver { color: var(--faint); }
+
+    /* ── signature: the cost console ── */
+    .console { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: 0 30px 60px -40px rgba(0,0,0,0.8); }
+    .console-bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+    .dotr { width: 10px; height: 10px; border-radius: 50%; background: #2b3947; }
+    .console-bar .lbl { margin-left: 8px; font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+    .console-body { padding: 16px 18px; font-family: var(--mono); font-size: 12.5px; line-height: 1.95; }
+    .row { display: flex; justify-content: space-between; gap: 12px; white-space: nowrap; }
+    .row .k { color: var(--mut); } .row .k .lb { color: var(--net); }
+    .row .v { color: var(--ink); }
+    .rule { border-top: 1px dashed var(--line); margin: 8px 0; }
+    .tot { display: flex; justify-content: space-between; }
+    .tot .k { color: var(--ink); font-weight: 600; }
+    .tot .v { color: var(--net); font-weight: 600; }
+    .listline { display: flex; justify-content: space-between; color: var(--faint); }
+    .listline .v { color: var(--list); }
+    .saved { margin-top: 10px; font-family: var(--mono); font-size: 11.5px; color: var(--mut); }
+    .saved b { color: var(--net); font-weight: 600; }
+    .arrow { margin-top: 12px; font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: 0.04em; }
+
+    /* sections */
+    .sec-lbl { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); display: flex; align-items: center; gap: 12px; margin: 76px 0 22px; }
+    .sec-lbl::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+    .feat { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .cell { background: var(--panel); padding: 20px; }
+    .cell h3 { font-size: 15.5px; font-weight: 600; color: var(--ink); margin-bottom: 7px; }
+    .cell p { font-size: 13px; color: var(--mut); line-height: 1.62; }
+    .cell code { font-family: var(--mono); font-size: 11.5px; color: var(--net); background: var(--net-dim); padding: 1px 5px; border-radius: 3px; }
+
+    /* providers */
+    .prov { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { font-family: var(--mono); font-size: 12.5px; padding: 7px 13px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); display: inline-flex; align-items: center; gap: 8px; }
+    .chip .ok { color: var(--net); } .chip .soon { color: var(--faint); }
+    .prov-note { margin-top: 14px; font-size: 13px; color: var(--mut); }
+    .prov-note code { font-family: var(--mono); font-size: 12px; color: var(--net); }
+
+    /* how */
+    .flow { font-family: var(--mono); font-size: 12.5px; color: var(--mut); line-height: 1.9; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; overflow-x: auto; }
+    .flow .net { color: var(--net); } .flow .arw { color: var(--faint); } .flow .hi { color: var(--ink); }
+
+    .install { margin-top: 22px; font-family: var(--mono); font-size: 12.5px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; line-height: 1.9; overflow-x: auto; color: var(--ink); }
+    .install .c { color: var(--faint); } .install .cmd { color: var(--net); }
+
+    footer { margin-top: 80px; border-top: 1px solid var(--line); }
+    footer .wrap { padding: 26px 26px 60px; font-family: var(--mono); font-size: 12px; color: var(--faint); display: flex; flex-wrap: wrap; gap: 6px 20px; justify-content: space-between; }
+    footer a { color: var(--mut); }
+
+    @media (max-width: 760px) {
+      .hero { grid-template-columns: 1fr; gap: 30px; padding: 52px 0 4px; }
+      .feat { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">open source · finops · apache-2.0</div>
+        <div class="wordmark">ducat</div>
+        <div class="tagline">one <span class="net">cost view</span> across every provider</div>
+        <p class="pitch">Cloud, SaaS, and AI spend, normalized on the FinOps <span class="hi">FOCUS</span> spec and exported to <span class="hi">Prometheus / Grafana</span>. Small per-provider adapters, two metrics, no platform , it points at the Prometheus and Grafana you already run.</p>
+        <div class="cta">
+          <a class="btn" href="https://github.com/75asu/ducat">GitHub &rarr;</a>
+          <a class="ghost" href="#how">how it works</a>
+          <span class="ver" id="ver"></span>
+        </div>
+      </div>
+
+      <!-- signature: the cost console -->
+      <div class="console">
+        <div class="console-bar"><span class="dotr"></span><span class="dotr"></span><span class="dotr"></span><span class="lbl">GET /metrics</span></div>
+        <div class="console-body">
+          <div class="row"><span class="k">ducat_cost_usd{<span class="lb">provider</span>="aws"}</span><span class="v">12,483.20</span></div>
+          <div class="row"><span class="k">ducat_cost_usd{<span class="lb">provider</span>="gcp"}</span><span class="v">4,120.55</span></div>
+          <div class="row"><span class="k">ducat_cost_usd{<span class="lb">provider</span>="openai"}</span><span class="v">890.40</span></div>
+          <div class="row"><span class="k">ducat_cost_usd{<span class="lb">provider</span>="cloudflare"}</span><span class="v">312.00</span></div>
+          <div class="row"><span class="k">ducat_cost_usd{<span class="lb">provider</span>="github"}</span><span class="v">210.00</span></div>
+          <div class="rule"></div>
+          <div class="tot"><span class="k">net billed</span><span class="v">$18,016.15</span></div>
+          <div class="listline"><span>list (pre-discount)</span><span class="v">$23,904.00</span></div>
+          <div class="saved">commitments saved you <b>$5,887.85</b> this month</div>
+          <div class="arrow">└─ scraped into the Grafana you already run</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- what it is -->
+    <div class="sec-lbl">what it is</div>
+    <div class="feat">
+      <div class="cell"><h3>Every provider, one signal</h3><p>Per-provider adapters call each billing API and normalize to a common FOCUS-shaped record , so whole-account cloud + SaaS + AI cost finally lands in one place.</p></div>
+      <div class="cell"><h3>Two metrics, one truth</h3><p><code>ducat_cost_usd</code> (net) and <code>ducat_list_cost_usd</code> (list), labeled <code>{provider, billing_account, service, currency}</code>. The gap between them is what your commitments save.</p></div>
+      <div class="cell"><h3>Not a platform</h3><p>No database, no UI, no operator. Storage and dashboards are the Prometheus + Grafana you already have; ducat only does the fetch-and-normalize.</p></div>
+      <div class="cell"><h3>Two run modes</h3><p><code>serve</code> exposes <code>/metrics</code> for Prometheus to scrape; <code>run</code> does a one-shot <code>remote_write</code> of dated samples, the right shape for a daily bill on CI/cron.</p></div>
+    </div>
+
+    <!-- providers -->
+    <div class="sec-lbl">providers</div>
+    <div class="prov">
+      <span class="chip"><span class="ok">●</span> GitHub</span>
+      <span class="chip"><span class="ok">●</span> AWS</span>
+      <span class="chip"><span class="ok">●</span> Cloudflare</span>
+      <span class="chip"><span class="soon">○</span> GCP</span>
+      <span class="chip"><span class="soon">○</span> OpenAI</span>
+      <span class="chip"><span class="soon">○</span> Anthropic</span>
+    </div>
+    <p class="prov-note">Adding one is a single file implementing <code>fetch(opts) -&gt; list[CostRow]</code>. Nothing downstream changes.</p>
+
+    <!-- how it works -->
+    <div class="sec-lbl" id="how">how it works</div>
+    <div class="flow">
+      adapters/ <span class="arw">(github · cloudflare · aws · gcp · openai · …)</span><br>
+      &nbsp;&nbsp;<span class="arw">│ each returns FOCUS-shaped CostRows</span><br>
+      &nbsp;&nbsp;<span class="arw">▼</span><br>
+      core: normalize <span class="arw">→</span> <span class="net">ducat_cost_usd</span> + <span class="net">ducat_list_cost_usd</span><br>
+      &nbsp;&nbsp;<span class="arw">▼</span><br>
+      <span class="hi">serve</span> /metrics <span class="arw">(scraped)</span> &nbsp;·&nbsp; <span class="hi">run</span> remote_write <span class="arw">(cron)</span><br>
+      &nbsp;&nbsp;<span class="arw">▼</span><br>
+      <span class="hi">Grafana</span>
+    </div>
+
+    <div class="install">
+      <span class="c"># one chart, your cluster, your Prometheus</span><br>
+      <span class="cmd">helm install ducat oci://ghcr.io/75asu/charts/ducat</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap">
+      <span>Apache-2.0 · a coin accepted across every border</span>
+      <span><a href="https://github.com/75asu/ducat">github.com/75asu/ducat</a> &nbsp;·&nbsp; <a href="https://75asu.pages.dev">@75asu</a></span>
+    </div>
+  </footer>
+
+  <script>
+    // Version stays current on its own: latest release tag from GitHub. Fails silent.
+    fetch('https://api.github.com/repos/75asu/ducat/releases/latest')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.tag_name) document.getElementById('ver').textContent = d.tag_name; })
+      .catch(function () {});
+  </script>
+  <!-- 100% privacy-first analytics -->
+  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+
+</body>
+</html>
