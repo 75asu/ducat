@@ -15,7 +15,7 @@ from prometheus_client.core import REGISTRY
 
 from .. import adapters as adapters_mod
 from ..config import Config
-from ..metrics import build_registry
+from ..metrics import SCRAPE_ERRORS, build_registry
 
 
 class _Refresher:
@@ -34,7 +34,13 @@ class _Refresher:
 def _fetch_all(cfg: Config) -> list:
     rows = []
     for name, opts in cfg.enabled_providers().items():
-        rows.extend(adapters_mod.get(name).fetch(opts))
+        # Isolate each provider: one failing adapter must not blank every board.
+        try:
+            rows.extend(adapters_mod.get(name).fetch(opts))
+        except Exception as exc:
+            print(f"ducat: {name}: fetch failed ({exc}); skipping.", flush=True)
+            SCRAPE_ERRORS.labels(provider=name, account="").inc()
+            continue
     return rows
 
 

@@ -17,13 +17,20 @@ import sys
 from . import adapters as adapters_mod
 from . import config as config_mod
 from .focus import CostRow
-from .metrics import aggregate
+from .metrics import SCRAPE_ERRORS, aggregate
 
 
 def _fetch_all(cfg: config_mod.Config) -> list[CostRow]:
     rows: list[CostRow] = []
     for name, opts in cfg.enabled_providers().items():
-        provider_rows = adapters_mod.get(name).fetch(opts)
+        # Isolate each provider: a single failing adapter must not abort the run
+        # and leave every provider's board empty.
+        try:
+            provider_rows = adapters_mod.get(name).fetch(opts)
+        except Exception as exc:
+            print(f"ducat: {name}: fetch failed ({exc}); skipping.", file=sys.stderr)
+            SCRAPE_ERRORS.labels(provider=name, account="").inc()
+            continue
         print(f"ducat: {name}: {len(provider_rows)} rows", file=sys.stderr)
         rows.extend(provider_rows)
     return rows

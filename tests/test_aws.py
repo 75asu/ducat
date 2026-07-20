@@ -1,9 +1,13 @@
 import sys
 import types
 
-import pytest
-
 from ducat.adapters.aws import AwsAdapter
+from ducat.metrics import SCRAPE_ERRORS
+
+
+def _scrape_errors(account: str) -> float:
+    """Current ducat_scrape_error count for an aws account label."""
+    return SCRAPE_ERRORS.labels(provider="aws", account=account)._value.get()
 
 # One month, three services. boto3 is stubbed (below) so this runs without the
 # SDK or any AWS credentials. The fake returns this for BOTH the consumption
@@ -157,12 +161,15 @@ def test_per_account_static_creds(monkeypatch):
     assert len(_FakeCE.calls) == 4
 
 
-def test_per_account_missing_env_errors(monkeypatch):
+def test_per_account_missing_env_skips_and_counts(monkeypatch):
     _stub_boto3(monkeypatch)
-    with pytest.raises(RuntimeError, match="static creds"):
-        AwsAdapter().fetch(
-            {"accounts": [{"id": "1", "access_key_id_env": "NOPE_AK", "secret_access_key_env": "NOPE_SK"}]}
-        )
+    before = _scrape_errors("1")
+    # A bad account is skipped (not raised) so it can't abort the whole refresh.
+    rows = AwsAdapter().fetch(
+        {"accounts": [{"id": "1", "access_key_id_env": "NOPE_AK", "secret_access_key_env": "NOPE_SK"}]}
+    )
+    assert rows == []
+    assert _scrape_errors("1") == before + 1
 
 
 def test_per_account_assume_role(monkeypatch):
@@ -177,7 +184,27 @@ def test_per_account_assume_role(monkeypatch):
     assert any(s.get("aws_session_token") == "temp-token" for s in _FakeSession.sessions)
 
 
-def test_per_account_no_auth_errors(monkeypatch):
+def test_per_account_no_auth_skips_and_counts(monkeypatch):
     _stub_boto3(monkeypatch)
-    with pytest.raises(RuntimeError, match="no auth configured"):
-        AwsAdapter().fetch({"accounts": [{"id": "1", "name": "orphan"}]})
+    before = _scrape_errors("orphan")
+    rows = AwsAdapter().fetch({"accounts": [{"name": "orphan"}]})
+    assert rows == []
+    assert _scrape_errors("orphan") == before + 1
+
+
+def test_per_account_isolation_keeps_good_accounts(monkeypatch):
+    _stub_boto3(monkeypatch)
+    monkeypatch.setenv("AK_OK", "keyOK")
+    monkeypatch.setenv("SK_OK", "secOK")
+    before = _scrape_errors("bad")
+    # One bad account (no creds) alongside a good one: the good one still returns.
+    rows = AwsAdapter().fetch(
+        {
+            "accounts": [
+                {"id": "bad", "access_key_id_env": "MISSING_AK", "secret_access_key_env": "MISSING_SK"},
+                {"id": "good", "name": "acct-ok", "access_key_id_env": "AK_OK", "secret_access_key_env": "SK_OK"},
+            ]
+        }
+    )
+    assert {r.billing_account for r in rows} == {"good"}
+    assert _scrape_errors("bad") == before + 1

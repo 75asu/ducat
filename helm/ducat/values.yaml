@@ -55,6 +55,18 @@ serviceMonitor:
   # target labels Prometheus stamps; `service` collides with the k8s Service
   # name otherwise. Almost always want this true for this exporter.
   honorLabels: true
+  # Drop the `pod`/`instance` labels the Operator stamps at scrape: across pod
+  # restarts and replicas they differ and the same cost series double-counts.
+  dropTargetLabels: true
+
+# Ship guardrail alerts as a PrometheusRule (serve mode). Fires when the exporter
+# is unreachable, exposes no cost data, or is logging fetch errors , so a stalled
+# scrape can't blank the board silently. Needs the Prometheus Operator CRDs.
+prometheusRule:
+  enabled: false               # set true on a Prometheus-Operator cluster (pairs with serviceMonitor)
+  labels: {}                   # e.g. { release: kube-prometheus-stack } so the Operator selects the rule
+  # How long a bad condition must hold before the alert fires.
+  for: 15m
 
 # Ship the Grafana dashboard as a sidecar-labeled ConfigMap (auto-imported by the
 # Grafana kiwigrid sidecar). Set folder to drop it into an RBAC-restricted folder.

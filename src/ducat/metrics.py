@@ -17,13 +17,25 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date
 
-from prometheus_client import CollectorRegistry, Gauge
+from prometheus_client import CollectorRegistry, Counter, Gauge
 
 from .focus import CostRow
 
 METRIC_NET = "ducat_cost_usd"
 METRIC_LIST = "ducat_list_cost_usd"
+METRIC_SCRAPE_ERROR = "ducat_scrape_error"
 LABELS = ("provider", "billing_account", "service", "currency")
+
+# Per-provider/account fetch failures. Lives on the default registry (not the
+# per-refresh one build_registry() swaps) so serve mode keeps exposing it across
+# refreshes; a nonzero value means a board is going stale even though the process
+# is up. Guards against the silent blank-board incident (#127). prometheus_client
+# exposes this as the `ducat_scrape_error_total` series.
+SCRAPE_ERRORS = Counter(
+    METRIC_SCRAPE_ERROR,
+    "Provider/account cost-fetch failures that were skipped so the refresh could continue.",
+    ("provider", "account"),
+)
 
 # Scrape (serve) mode keeps a `month` label so a single scrape carries every
 # month's cost, and a `billing_account_name` so multi-account/project views are

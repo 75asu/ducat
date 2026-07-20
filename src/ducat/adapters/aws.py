@@ -41,10 +41,12 @@ from __future__ import annotations
 
 import datetime as _dt
 import os
+import sys
 from collections import defaultdict
 from typing import Any
 
 from ..focus import CostRow
+from ..metrics import SCRAPE_ERRORS
 
 _CE_REGION = "us-east-1"  # Cost Explorer only lives here.
 _Key = tuple[str, str, _dt.date]  # (service, account, period_start)
@@ -70,8 +72,16 @@ class AwsAdapter:
             # account and tag the rows from that account's own config entry.
             rows: list[CostRow] = []
             for acct in accounts:
-                session = self._session_for_account(boto3, acct)
-                rows.extend(self._run(session, opts, acct=acct))
+                label = acct.get("id") or acct.get("name") or "?"
+                # Isolate each account: one bad set of creds (or a CE permission
+                # gap) must not abort the whole refresh and blank every board.
+                try:
+                    session = self._session_for_account(boto3, acct)
+                    rows.extend(self._run(session, opts, acct=acct))
+                except Exception as exc:
+                    print(f"ducat: aws: account {label} failed ({exc}); skipping.", file=sys.stderr)
+                    SCRAPE_ERRORS.labels(provider="aws", account=str(label)).inc()
+                    continue
             return rows
 
         # Single-principal mode (default): the ambient creds, or a named profile.

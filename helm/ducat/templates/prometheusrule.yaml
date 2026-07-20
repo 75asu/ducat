@@ -1,0 +1,42 @@
+{{- if and (eq .Values.mode "serve") .Values.prometheusRule.enabled -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "ducat.fullname" . }}
+  labels:
+    {{- include "ducat.labels" . | nindent 4 }}
+    {{- with .Values.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: ducat.guardrails
+      rules:
+        # The exporter is up but scraping fails: no way to see cost at all.
+        - alert: DucatExporterDown
+          expr: up{job=~".*{{ include "ducat.fullname" . }}.*"} == 0
+          for: {{ .Values.prometheusRule.for }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "ducat exporter is not being scraped"
+            description: "Prometheus can't scrape ducat; the cost board is going blank."
+        # Scrape works but no cost series , every provider fetch returned nothing.
+        - alert: DucatNoCostData
+          expr: absent(ducat_cost_usd)
+          for: {{ .Values.prometheusRule.for }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "ducat is exposing no cost data"
+            description: "ducat_cost_usd is absent; a stalled refresh is blanking the board."
+        # A provider/account fetch is failing and being skipped (see #127).
+        - alert: DucatScrapeErrors
+          expr: increase(ducat_scrape_error_total[{{ .Values.prometheusRule.for }}]) > 0
+          for: {{ .Values.prometheusRule.for }}
+          labels:
+            severity: warning
+          annotations:
+            summary: "ducat is skipping a provider/account"
+            description: "ducat_scrape_error_total is rising for {{`{{ $labels.provider }}`}}/{{`{{ $labels.account }}`}}; that board is stale."
+{{- end }}

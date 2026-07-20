@@ -21,4 +21,12 @@ spec:
       # would otherwise be overwritten by the Kubernetes Service name and collapse
       # every provider's per-service breakdown into one bucket.
       honorLabels: {{ .Values.serviceMonitor.honorLabels }}
+      {{- if .Values.serviceMonitor.dropTargetLabels }}
+      # The Operator stamps `pod` and `instance` at scrape; they differ across
+      # pod restarts and replicas, so the same cost series shows up under several
+      # identities and double-counts. Drop them , ducat's own labels identify a row.
+      metricRelabelings:
+        - action: labeldrop
+          regex: (pod|instance)
+      {{- end }}
 {{- end }}
