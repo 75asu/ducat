@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.1](https://github.com/75asu/ducat/compare/v0.4.0...v0.4.1) (2026-07-20)
+
+
+### Bug Fixes
+
+* isolate per-account/provider fetch failures and add scrape guardrails (FP-1288) ([ba2d9d4](https://github.com/75asu/ducat/commit/ba2d9d4f18226b8bd947c0ff842c6c06f7379ca0))
+
+
+### Documentation
+
+* landing page + OG card (GitHub Pages) ([2f3a6f1](https://github.com/75asu/ducat/commit/2f3a6f1bdc926ad690886e6cf300c8c465b084b3))
+
 ## [0.4.0](https://github.com/75asu/ducat/compare/v0.3.0...v0.4.0) (2026-07-03)
 
 
