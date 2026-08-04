@@ -5,7 +5,31 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# A second push to the same PR makes the first run's answer irrelevant.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Style and static checks do not vary by interpreter, so they run once rather
+  # than four times across the test matrix.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Ruff , lint
+        run: uv run ruff check --output-format=github .
+      - name: Ruff , format
+        # Checked, never auto-applied: CI must not push commits, and a formatting
+        # diff is the author's to resolve.
+        run: uv run ruff format --check --diff .
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -14,14 +38,139 @@ jobs:
         python: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python }}
-      - run: pip install -e ".[dev]"
-      - name: Lint
-        run: ruff check .
+          enable-cache: true
       - name: Test
-        run: pytest -q
+        # requires-python is >=3.10, so the floor gets tested and not just the
+        # newest interpreter. zip(strict=) and X | Y annotations both behave
+        # differently down there.
+        run: uv run --python ${{ matrix.python }} --extra dev pytest -q
+
+  # Catches packaging breakage at PR time instead of at release time, when the tag
+  # is already cut and fixing it needs a new one.
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Build sdist + wheel
+        run: uv build
+      - name: Check the metadata renders
+        run: uvx twine check dist/*
+      - name: Install the wheel and use it from outside the source tree
+        # A wheel that omits a subpackage or ships no entry point looks fine until
+        # someone installs it. Running from /tmp stops the local source dir from
+        # masking a packaging mistake.
+        run: |
+          python -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install --quiet dist/*.whl
+          cd /tmp
+          /tmp/wheeltest/bin/ducat --help
+          /tmp/wheeltest/bin/python -c \
+            "import ducat.adapters as a; print('adapters:', a.available())"
+
+  # The chart is a published artifact (oci://ghcr.io/75asu/charts) and nothing was
+  # validating it, so a broken template first showed up when Flux tried to reconcile.
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Lint
+        run: helm lint helm/ducat
+
+      - name: Render , defaults
+        run: helm template ci helm/ducat > /tmp/default.yaml
+
+      - name: Render , cronjob mode
+        run: |
+          helm template ci helm/ducat --set mode=cronjob \
+            --set sink.remote_write.url=http://example/api/v1/write > /tmp/cronjob.yaml
+
+      - name: Render , every optional feature on at once
+        run: |
+          cat > /tmp/all-values.yaml <<'EOF'
+          serviceMonitor: { enabled: true }
+          prometheusRule: { enabled: true }
+          dashboards: { enabled: true }
+          extraVolumes:
+            - name: billing-csv
+              configMap: { name: ducat-billing-csv }
+          extraVolumeMounts:
+            - name: billing-csv
+              mountPath: /var/lib/ducat/billing-csv
+              readOnly: true
+          config:
+            providers:
+              gcp:
+                enabled: true
+                project: acme-billing
+                dataset: acme_billing_export
+                billing_account_id: "0A0A0A-0B0B0B-0C0C0C"
+                csv_dir: /var/lib/ducat/billing-csv
+          EOF
+          helm template ci helm/ducat -f /tmp/all-values.yaml > /tmp/full.yaml
+
+      - name: Every render is valid Kubernetes YAML
+        run: |
+          python - <<'EOF'
+          import yaml
+          for f in ("/tmp/default.yaml", "/tmp/cronjob.yaml", "/tmp/full.yaml"):
+              docs = [d for d in yaml.safe_load_all(open(f)) if d]
+              assert docs, f"{f} rendered nothing"
+              for d in docs:
+                  assert d.get("kind"), f"{f}: a document has no kind"
+                  assert d.get("apiVersion"), f"{f}: {d['kind']} has no apiVersion"
+              print(f"{f}: {sorted({d['kind'] for d in docs})}")
+          EOF
+
+      - name: extraVolumes actually reaches the pod spec
+        # This is the whole point of that value. If the mount silently vanishes then
+        # providers.gcp.csv_dir points at a path that does not exist and imports
+        # nothing, with no error anywhere.
+        run: |
+          python - <<'EOF'
+          import yaml
+          for d in yaml.safe_load_all(open("/tmp/full.yaml")):
+              if not d or d.get("kind") != "Deployment":
+                  continue
+              pod = d["spec"]["template"]["spec"]
+              vols = {v["name"] for v in pod.get("volumes", [])}
+              mounts = {
+                  m["mountPath"]
+                  for c in pod["containers"]
+                  for m in c.get("volumeMounts", [])
+              }
+              assert "billing-csv" in vols, f"volume missing, got {sorted(vols)}"
+              assert "/var/lib/ducat/billing-csv" in mounts, (
+                  f"mount missing, got {sorted(mounts)}"
+              )
+              print(f"volumes={sorted(vols)} mounts={sorted(mounts)}")
+              break
+          else:
+              raise SystemExit("no Deployment rendered")
+          EOF
+
+      - name: The bundled dashboard is valid JSON after templating
+        # It is embedded into a ConfigMap with .Files.Get, so an indentation slip
+        # yields a ConfigMap that applies cleanly and a dashboard Grafana cannot
+        # parse. Silent until someone opens it.
+        run: |
+          python - <<'EOF'
+          import json, yaml
+          for d in yaml.safe_load_all(open("/tmp/full.yaml")):
+              if d and d.get("kind") == "ConfigMap" and "ducat.json" in (d.get("data") or {}):
+                  dash = json.loads(d["data"]["ducat.json"])
+                  print("dashboard:", len(dash["panels"]), "panels,",
+                        [v["name"] for v in dash["templating"]["list"]])
+                  break
+          else:
+              raise SystemExit("no dashboard ConfigMap rendered")
+          EOF
 
   docker:
     # Build the image on every push/PR (no push to registry) to keep it honest.
@@ -34,3 +183,38 @@ jobs:
           context: .
           push: false
           tags: ducat:ci
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: The image starts and serves /metrics
+        # A successful build proves the Dockerfile parses. It does not prove the
+        # entry point works, the deps resolved, or that the exporter comes up.
+        run: |
+          docker run --rm ducat:ci --help
+          printf 'providers: {}\nsink: {}\n' > /tmp/empty-config.yaml
+          # --rm with -d so the container is reaped on stop; no docker rm needed.
+          docker run --rm -d --name ducat-ci -p 9090:9090 \
+            -v /tmp/empty-config.yaml:/etc/ducat/config.yaml:ro \
+            ducat:ci serve --config /etc/ducat/config.yaml --port 9090
+          ok=""
+          for i in $(seq 1 30); do
+            if curl -fsS localhost:9090/metrics >/dev/null 2>&1; then
+              echo "/metrics served after ${i}s"
+              ok=1
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then docker logs ducat-ci; docker stop ducat-ci; exit 1; fi
+          # Assert on the declared metric FAMILIES, not on samples: with no providers
+          # configured there are legitimately zero cost series, so grepping '^ducat_'
+          # would fail on a perfectly healthy exporter. HELP lines prove the registry
+          # was built, which is what this check is actually for.
+          body=$(curl -fsS localhost:9090/metrics)
+          for m in ducat_cost_usd ducat_list_cost_usd ducat_scrape_error_total; do
+            echo "$body" | grep -q "# HELP $m" || {
+              echo "missing metric family: $m"; docker stop ducat-ci; exit 1; }
+            echo "declared: $m"
+          done
+          docker stop ducat-ci
