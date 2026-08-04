@@ -37,6 +37,9 @@ spec:
                 - name: config
                   mountPath: /etc/ducat
                   readOnly: true
+                {{- with .Values.extraVolumeMounts }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
               {{- with .Values.resources }}
               resources:
                 {{- toYaml . | nindent 16 }}
@@ -45,4 +48,7 @@ spec:
             - name: config
               configMap:
                 name: {{ include "ducat.fullname" . }}
+            {{- with .Values.extraVolumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
 {{- end }}

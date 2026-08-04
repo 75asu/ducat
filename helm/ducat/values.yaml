@@ -31,6 +31,16 @@ config:
     #   enabled: true
     #   account_id: "<cf-account-id>"
     #   token_env: CLOUDFLARE_API_TOKEN   # account token with Billing: Read
+    # gcp:                       # reads the Cloud Billing BigQuery export (no cost API
+    #   enabled: true            # exists); creds via Workload Identity on the SA below.
+    #   source: focus            # or `standard` (GA, durable, adapter does the mapping)
+    #   project: <project-holding-the-export>
+    #   dataset: <dataset>       # focus: gcp_billing_immutable_<ACCT_UNDERSCORED>_<region>
+    #   billing_account_id: "<XXXXXX-XXXXXX-XXXXXX>"
+    #   # Months predating the export, from Console "Cost table" CSVs. The export is
+    #   # forward-only (it backfills the current + previous month and nothing more),
+    #   # so earlier months exist only as CSVs. Mount them here via extraVolumes.
+    #   csv_dir: /var/lib/ducat/billing-csv
   sink:
     remote_write:
       url: ""                  # required for cronjob mode
@@ -41,6 +51,33 @@ config:
 #     - secretRef: { name: ducat-secrets }
 envFrom: []
 env: []
+
+# Extra volumes on the ducat pod (serve Deployment and cronjob Job alike).
+#
+# The case this exists for: `providers.gcp.csv_dir` reads historical Console CSV
+# exports off the filesystem, which is unreachable in a container without a volume.
+# Any source works, and the trade-offs differ:
+#
+#   configMap  simplest, no extra infra, but capped at ~1 MiB total. A single
+#              month of a mid-size estate is ~200 KiB, so this covers a handful of
+#              months and then stops. Fine for a one-time historical backfill.
+#   pvc        no size limit, survives restarts, but needs the files put there once
+#              (a Job, or kubectl cp).
+#   csi        object-storage mounts (GCS/S3 CSI drivers) keep the files in a bucket
+#              where they are versioned and auditable. Best if you have the driver.
+#
+# Mount read-only: ducat never writes here.
+#
+# extraVolumes:
+#   - name: billing-csv
+#     configMap:
+#       name: ducat-billing-csv        # kubectl create configmap ducat-billing-csv --from-file=...
+# extraVolumeMounts:
+#   - name: billing-csv
+#     mountPath: /var/lib/ducat/billing-csv
+#     readOnly: true
+extraVolumes: []
+extraVolumeMounts: []
 
 serviceAccount:
   create: true
