@@ -39,7 +39,7 @@ def test_build_registry_buckets_by_month():
         "provider": "github",
         "billing_account": "acme",
         "billing_account_name": "acme",
-        "sub_account": "",          # github has no sub-account concept
+        "sub_account": "",  # github has no sub-account concept
         "service": "copilot",
         "currency": "USD",
     }
@@ -54,10 +54,28 @@ def test_build_registry_buckets_by_month():
 
 
 def test_build_registry_uses_account_name():
-    reg = build_registry([CostRow("aws", "111122223333", "EC2", 0.0, date(2026, 6, 1),
-                                  list_cost=50.0, billing_account_name="india1")])
-    labels = {"provider": "aws", "billing_account": "111122223333", "billing_account_name": "india1",
-              "sub_account": "", "service": "EC2", "currency": "USD", "month": "2026-06"}
+    reg = build_registry(
+        [
+            CostRow(
+                "aws",
+                "111122223333",
+                "EC2",
+                0.0,
+                date(2026, 6, 1),
+                list_cost=50.0,
+                billing_account_name="india1",
+            )
+        ]
+    )
+    labels = {
+        "provider": "aws",
+        "billing_account": "111122223333",
+        "billing_account_name": "india1",
+        "sub_account": "",
+        "service": "EC2",
+        "currency": "USD",
+        "month": "2026-06",
+    }
     assert reg.get_sample_value(METRIC_LIST, labels) == 50.0
 
 
@@ -68,13 +86,33 @@ def test_build_registry_splits_by_sub_account():
     is burning money' cannot be recovered once projects are aggregated together.
     """
     rows = [
-        CostRow("gcp", "BA-1", "Compute Engine", 0.0, date(2026, 7, 1),
-                list_cost=8000.0, sub_account="acme-prod"),
-        CostRow("gcp", "BA-1", "Compute Engine", 0.0, date(2026, 7, 1),
-                list_cost=2000.0, sub_account="acme-dev2"),
+        CostRow(
+            "gcp",
+            "BA-1",
+            "Compute Engine",
+            0.0,
+            date(2026, 7, 1),
+            list_cost=8000.0,
+            sub_account="acme-prod",
+        ),
+        CostRow(
+            "gcp",
+            "BA-1",
+            "Compute Engine",
+            0.0,
+            date(2026, 7, 1),
+            list_cost=2000.0,
+            sub_account="acme-dev2",
+        ),
     ]
     reg = build_registry(rows)
-    base = {"provider": "gcp", "billing_account": "BA-1", "billing_account_name": "BA-1",
-            "service": "Compute Engine", "currency": "USD", "month": "2026-07"}
+    base = {
+        "provider": "gcp",
+        "billing_account": "BA-1",
+        "billing_account_name": "BA-1",
+        "service": "Compute Engine",
+        "currency": "USD",
+        "month": "2026-07",
+    }
     assert reg.get_sample_value(METRIC_LIST, {**base, "sub_account": "acme-prod"}) == 8000.0
     assert reg.get_sample_value(METRIC_LIST, {**base, "sub_account": "acme-dev2"}) == 2000.0

@@ -89,14 +89,23 @@ class CloudflareAdapter:
         return rows
 
     def _billable_usage(
-        self, base: str, account: str, account_name: str, headers: dict, opts: dict[str, Any], today: _dt.date
+        self,
+        base: str,
+        account: str,
+        account_name: str,
+        headers: dict,
+        opts: dict[str, Any],
+        today: _dt.date,
     ) -> list[CostRow]:
         params = {
             "from": opts.get("from") or _dt.date(today.year, 1, 1).isoformat(),
             "to": opts.get("to") or today.isoformat(),
         }
         resp = httpx.get(
-            f"{base}/accounts/{account}/billable/usage", headers=headers, params=params, timeout=30.0
+            f"{base}/accounts/{account}/billable/usage",
+            headers=headers,
+            params=params,
+            timeout=30.0,
         )
         # Alpha/Restricted: 403 until Cloudflare enables it for the account. Skip
         # silently so the adapter still returns the subscription rows; it starts

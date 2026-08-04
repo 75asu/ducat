@@ -2,6 +2,7 @@
 
 Uses a stubbed BigQuery client so the test needs no credentials and no network.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -16,6 +17,7 @@ from ducat.adapters.gcp import GcpAdapter
 
 def _install_fake_bigquery(rows, captured):
     """Register a fake google.cloud.bigquery so the adapter's import succeeds."""
+
     class _Param:
         def __init__(self, name, _type, value):
             self.name, self.value = name, value
@@ -102,8 +104,8 @@ def test_focus_rows_map_to_costrow():
                 "region": "us-west4",
                 "sku": "ABC-123",
                 "currency": "USD",
-                "billed_cost": 0.0,      # credit-funded: nothing payable
-                "list_cost": 4321.5,     # but real consumption at list rate
+                "billed_cost": 0.0,  # credit-funded: nothing payable
+                "list_cost": 4321.5,  # but real consumption at list rate
             }
         ],
         captured,
@@ -116,7 +118,7 @@ def test_focus_rows_map_to_costrow():
     assert r.provider == "gcp"
     assert r.service == "Compute Engine"
     assert r.billed_cost == 0.0
-    assert r.list_cost == 4321.5          # the number that matters on credits
+    assert r.list_cost == 4321.5  # the number that matters on credits
     assert r.period_start == dt.date(2026, 7, 15)
     assert r.sub_account == "acme-prod"
     assert r.region == "us-west4"

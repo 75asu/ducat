@@ -88,7 +88,9 @@ def _cmd_providers(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="ducat", description="One cost view across every provider.")
+    parser = argparse.ArgumentParser(
+        prog="ducat", description="One cost view across every provider."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     run = sub.add_parser("run", help="one-shot: fetch and push (or --print)")

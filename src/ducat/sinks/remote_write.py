@@ -54,7 +54,11 @@ def push(rows: list[CostRow], sink: SinkConfig) -> int:
             "currency": currency,
         }
         ts = _epoch_ms(period)
-        series.append({"metric": {"__name__": METRIC_NET, **base}, "values": [net], "timestamps": [ts]})
-        series.append({"metric": {"__name__": METRIC_LIST, **base}, "values": [gross], "timestamps": [ts]})
+        series.append(
+            {"metric": {"__name__": METRIC_NET, **base}, "values": [net], "timestamps": [ts]}
+        )
+        series.append(
+            {"metric": {"__name__": METRIC_LIST, **base}, "values": [gross], "timestamps": [ts]}
+        )
     writer.send(series)
     return len(series)

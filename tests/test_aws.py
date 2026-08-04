@@ -9,6 +9,7 @@ def _scrape_errors(account: str) -> float:
     """Current ducat_scrape_error count for an aws account label."""
     return SCRAPE_ERRORS.labels(provider="aws", account=account)._value.get()
 
+
 # One month, three services. boto3 is stubbed (below) so this runs without the
 # SDK or any AWS credentials. The fake returns this for BOTH the consumption
 # query (reads UnblendedCost -> list_cost) and the invoice query
@@ -141,8 +142,18 @@ def test_per_account_static_creds(monkeypatch):
     rows = AwsAdapter().fetch(
         {
             "accounts": [
-                {"id": "111111111111", "name": "acct-a", "access_key_id_env": "AK_A", "secret_access_key_env": "SK_A"},
-                {"id": "222222222222", "name": "acct-b", "access_key_id_env": "AK_B", "secret_access_key_env": "SK_B"},
+                {
+                    "id": "111111111111",
+                    "name": "acct-a",
+                    "access_key_id_env": "AK_A",
+                    "secret_access_key_env": "SK_A",
+                },
+                {
+                    "id": "222222222222",
+                    "name": "acct-b",
+                    "access_key_id_env": "AK_B",
+                    "secret_access_key_env": "SK_B",
+                },
             ]
         }
     )
@@ -166,7 +177,11 @@ def test_per_account_missing_env_skips_and_counts(monkeypatch):
     before = _scrape_errors("1")
     # A bad account is skipped (not raised) so it can't abort the whole refresh.
     rows = AwsAdapter().fetch(
-        {"accounts": [{"id": "1", "access_key_id_env": "NOPE_AK", "secret_access_key_env": "NOPE_SK"}]}
+        {
+            "accounts": [
+                {"id": "1", "access_key_id_env": "NOPE_AK", "secret_access_key_env": "NOPE_SK"}
+            ]
+        }
     )
     assert rows == []
     assert _scrape_errors("1") == before + 1
@@ -175,7 +190,15 @@ def test_per_account_missing_env_skips_and_counts(monkeypatch):
 def test_per_account_assume_role(monkeypatch):
     _stub_boto3(monkeypatch)
     rows = AwsAdapter().fetch(
-        {"accounts": [{"id": "333333333333", "name": "assumed", "role_arn": "arn:aws:iam::333333333333:role/ce-reader"}]}
+        {
+            "accounts": [
+                {
+                    "id": "333333333333",
+                    "name": "assumed",
+                    "role_arn": "arn:aws:iam::333333333333:role/ce-reader",
+                }
+            ]
+        }
     )
     assert {r.billing_account for r in rows} == {"333333333333"}
     # the base session assumed the configured role, then a session was built from
@@ -201,8 +224,17 @@ def test_per_account_isolation_keeps_good_accounts(monkeypatch):
     rows = AwsAdapter().fetch(
         {
             "accounts": [
-                {"id": "bad", "access_key_id_env": "MISSING_AK", "secret_access_key_env": "MISSING_SK"},
-                {"id": "good", "name": "acct-ok", "access_key_id_env": "AK_OK", "secret_access_key_env": "SK_OK"},
+                {
+                    "id": "bad",
+                    "access_key_id_env": "MISSING_AK",
+                    "secret_access_key_env": "MISSING_SK",
+                },
+                {
+                    "id": "good",
+                    "name": "acct-ok",
+                    "access_key_id_env": "AK_OK",
+                    "secret_access_key_env": "SK_OK",
+                },
             ]
         }
     )

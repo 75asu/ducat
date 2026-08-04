@@ -142,7 +142,9 @@ class AwsAdapter:
             "access_key_id_env (+ secret_access_key_env), profile, or role_arn."
         )
 
-    def _run(self, session: Any, opts: dict[str, Any], acct: dict[str, Any] | None) -> list[CostRow]:
+    def _run(
+        self, session: Any, opts: dict[str, Any], acct: dict[str, Any] | None
+    ) -> list[CostRow]:
         """Run the dual (consumption + invoice) Cost Explorer query on one session."""
         ce = session.client("ce", region_name=opts.get("region", _CE_REGION))
 
@@ -161,7 +163,9 @@ class AwsAdapter:
             # standalone account with no LINKED_ACCOUNT dimension).
             force_account = str(acct.get("id", "")) or None
             account_fallback = force_account or ""
-            account_names = {account_fallback: acct.get("name", account_fallback)} if account_fallback else {}
+            account_names = (
+                {account_fallback: acct.get("name", account_fallback)} if account_fallback else {}
+            )
         else:
             force_account = None
             account_fallback = str(opts.get("account", ""))
@@ -182,7 +186,9 @@ class AwsAdapter:
         # 1) consumption: usage priced at list rate, filtered to real usage.
         cons_kwargs = {**base, "Metrics": [list_metric]}
         if usage_record_types:
-            cons_kwargs["Filter"] = {"Dimensions": {"Key": "RECORD_TYPE", "Values": usage_record_types}}
+            cons_kwargs["Filter"] = {
+                "Dimensions": {"Key": "RECORD_TYPE", "Values": usage_record_types}
+            }
         consumed, ccy = self._collect(ce, cons_kwargs, list_metric, account_fallback, force_account)
 
         # 2) invoice: what actually gets billed, all record types (credits net in).

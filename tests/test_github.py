@@ -6,14 +6,30 @@ from ducat.adapters.github import GithubAdapter
 _SAMPLE = {
     "usageItems": [
         # net > 0 (actually billed)
-        {"date": "2026-06-01", "product": "copilot", "sku": "Copilot Business",
-         "netAmount": 133.0, "grossAmount": 133.0},
+        {
+            "date": "2026-06-01",
+            "product": "copilot",
+            "sku": "Copilot Business",
+            "netAmount": 133.0,
+            "grossAmount": 133.0,
+        },
         # net 0 but gross > 0 (fully covered by the included plan) -> keep for list cost
-        {"date": "2026-06-01", "product": "actions", "sku": "Actions Linux",
-         "netAmount": 0.0, "grossAmount": 40.0, "repositoryName": "acme-inc/widgets"},
+        {
+            "date": "2026-06-01",
+            "product": "actions",
+            "sku": "Actions Linux",
+            "netAmount": 0.0,
+            "grossAmount": 40.0,
+            "repositoryName": "acme-inc/widgets",
+        },
         # both 0 -> dropped
-        {"date": "2026-06-01", "product": "actions", "sku": "Actions storage",
-         "netAmount": 0.0, "grossAmount": 0.0},
+        {
+            "date": "2026-06-01",
+            "product": "actions",
+            "sku": "Actions storage",
+            "netAmount": 0.0,
+            "grossAmount": 0.0,
+        },
     ]
 }
 
@@ -21,6 +37,7 @@ _SAMPLE = {
 def _fake_get(status, payload):
     def _get(url, headers=None, params=None, timeout=None):
         return httpx.Response(status, json=payload, request=httpx.Request("GET", url))
+
     return _get
 
 

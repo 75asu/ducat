@@ -130,8 +130,18 @@ def aggregate_by_month(
 def build_registry(rows: list[CostRow]) -> CollectorRegistry:
     """A fresh registry with net + list cost per (label set, month) for scrape mode."""
     registry = CollectorRegistry()
-    g_net = Gauge(METRIC_NET, "Billed (net) cost in USD by provider/account/project/service/month.", SCRAPE_LABELS, registry=registry)
-    g_list = Gauge(METRIC_LIST, "List (pre-discount) cost in USD by provider/account/project/service/month.", SCRAPE_LABELS, registry=registry)
+    g_net = Gauge(
+        METRIC_NET,
+        "Billed (net) cost in USD by provider/account/project/service/month.",
+        SCRAPE_LABELS,
+        registry=registry,
+    )
+    g_list = Gauge(
+        METRIC_LIST,
+        "List (pre-discount) cost in USD by provider/account/project/service/month.",
+        SCRAPE_LABELS,
+        registry=registry,
+    )
     for labels, (net, gross) in aggregate_by_month(rows).items():
         g_net.labels(*labels).set(net)
         g_list.labels(*labels).set(gross)
