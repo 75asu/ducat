@@ -1,0 +1,5 @@
+Mount point for historical GCP Console "Cost table" CSVs.
+
+Files here are ignored by git on purpose: this repo is public and the exports
+contain real project names and spend. Point BILLING_CSV_DIR at a folder outside
+the repo instead, which is what the Makefile does.

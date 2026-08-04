@@ -15,3 +15,13 @@ venv/
 /config.local.yaml
 .env
 *.local.yaml
+
+# Billing CSV exports. This repo is PUBLIC and these files carry real project
+# names, SKUs and spend for a private estate. The mount point exists so the
+# container path matches the cluster; the contents must never be committed.
+deploy/local/billing-csv/*
+!deploy/local/billing-csv/.gitkeep
+*Cost table*.csv
+
+# Local env: not secret, but identifies your estate (billing account, projects).
+deploy/local/.env

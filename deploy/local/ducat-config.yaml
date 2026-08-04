@@ -1,0 +1,70 @@
+# Local ducat config. Safe to commit: no secrets, and no identifiers either.
+#
+# Everything specific to YOUR estate comes from the environment via ${VAR}, so this
+# file is the same for everyone. Copy .env.example to .env, fill it in, and
+# `make local-up` picks it up (docker compose reads .env from this directory).
+#
+# GCP auth is ambient (Application Default Credentials), mounted read-only into the
+# container from ~/.config/gcloud. No keys are copied and nothing is written back.
+
+providers:
+  gcp:
+    enabled: true
+
+    # Which export table to read.
+    #   focus     FOCUS-named columns, near 1:1 mapping. Preview, Google-managed
+    #             immutable dataset, 2-year TTL.
+    #   standard  GA and durable, GCP-native schema, so the adapter does the FOCUS
+    #             translation (including the credits UNNEST) itself.
+    source: ${DUCAT_GCP_SOURCE:-focus}
+
+    # Where the billing export lives. For `source: focus` the dataset is the
+    # Google-managed one, named gcp_billing_immutable_<ACCOUNT_WITH_UNDERSCORES>_<REGION>;
+    # for `source: standard` it is whichever dataset you chose when enabling the export.
+    project: ${DUCAT_GCP_PROJECT}
+    dataset: ${DUCAT_GCP_DATASET}
+    billing_account_id: ${DUCAT_GCP_BILLING_ACCOUNT}
+
+    # Project that runs the query and is billed for the scan. Left empty it falls
+    # back to the project holding the export. (Substitution is not nested, so this
+    # is an empty default rather than a reference to DUCAT_GCP_PROJECT.)
+    query_project: ${DUCAT_GCP_QUERY_PROJECT:-}
+
+    # Cap the scan so a bad query fails loudly instead of quietly costing money.
+    max_bytes_billed: 21474836480     # 20 GiB
+
+    # Historical months from Console "Cost table" CSV exports. Optional: leave the
+    # directory empty and nothing is imported.
+    #
+    # Needed because the BigQuery export is forward-only. Enabling it backfills the
+    # current and previous month for a multi-region dataset and nothing earlier, and
+    # GCP has no cost API to recover the rest, so months before that window exist
+    # ONLY as Console CSVs.
+    #
+    # This is a fixed, one-time window. It cannot grow, and once BigQuery's coverage
+    # meets the newest CSV month this directory stops contributing. Where a month
+    # appears in both, the CSV wins: it is a whole invoice, BigQuery's edge months
+    # are partial, and summing them would double-count.
+    #
+    # Same path in the cluster (PVC, or a sync from object storage), so the adapter
+    # is unaware of which environment it is running in.
+    csv_dir: ${DUCAT_GCP_CSV_DIR:-/var/lib/ducat/billing-csv}
+
+    # Window. Defaults to Jan 1 of the current year -> today if omitted.
+    # from: 2026-01-01
+    # to:   2026-12-31
+
+  # Other providers ship the same way; enable what you have.
+  # aws:
+  #   enabled: true
+  #   accounts: [${DUCAT_AWS_ACCOUNTS:-}]
+  # cloudflare:
+  #   enabled: true
+  #   account: ${DUCAT_CF_ACCOUNT}
+  #   token_env: CLOUDFLARE_API_TOKEN
+  # github:
+  #   enabled: true
+  #   org: ${DUCAT_GITHUB_ORG}
+  #   token_env: GITHUB_TOKEN
+
+sink: {}    # scrape-only. Nothing is pushed anywhere from this machine.
