@@ -36,10 +36,63 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  publish:
+  # Nothing is published until the gates pass ON THE TAG WE ARE ABOUT TO SHIP.
+  #
+  # CI already runs on every push and PR, but that is not the same guarantee: CI
+  # green on some earlier commit does not mean the release-please merge commit is
+  # green, and a published image plus an OCI chart cannot be unpublished. Re-running
+  # the checks against the exact ref being built is a couple of cheap minutes against
+  # a bad artifact that Flux would happily reconcile into a cluster.
+  verify:
     needs: release-please
     if: |
       always() &&
+      (needs.release-please.outputs.release_created == 'true' ||
+       github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name || inputs.publish_tag }}
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - uses: azure/setup-helm@v4
+
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Test on the oldest supported interpreter
+        # requires-python is >=3.10. If the tag does not work on the floor we claim
+        # to support, it is not releasable.
+        run: uv run --python 3.10 --extra dev pytest -q
+      - name: Build sdist + wheel
+        run: uv build
+      - name: Chart lints and renders
+        run: |
+          helm lint helm/ducat
+          helm template rel helm/ducat > /dev/null
+          helm template rel helm/ducat --set mode=cronjob \
+            --set sink.remote_write.url=http://example/api/v1/write > /dev/null
+
+      - name: Chart version matches the tag
+        # release-please bumps Chart.yaml via extra-files. If that ever silently
+        # fails, the chart publishes under a version that does not exist in git.
+        run: |
+          TAG="${{ needs.release-please.outputs.tag_name || inputs.publish_tag }}"
+          WANT="${TAG#v}"
+          GOT=$(grep -E '^version:' helm/ducat/Chart.yaml | awk '{print $2}')
+          APP=$(grep -E '^appVersion:' helm/ducat/Chart.yaml | tr -d '"' | awk '{print $2}')
+          echo "tag=$WANT chart=$GOT appVersion=$APP"
+          [ "$GOT" = "$WANT" ] || { echo "chart version != tag"; exit 1; }
+          [ "$APP" = "$WANT" ] || { echo "appVersion != tag"; exit 1; }
+
+  publish:
+    needs: [release-please, verify]
+    if: |
+      always() &&
+      needs.verify.result == 'success' &&
       (needs.release-please.outputs.release_created == 'true' ||
        github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
