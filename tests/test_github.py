@@ -10,7 +10,7 @@ _SAMPLE = {
          "netAmount": 133.0, "grossAmount": 133.0},
         # net 0 but gross > 0 (fully covered by the included plan) -> keep for list cost
         {"date": "2026-06-01", "product": "actions", "sku": "Actions Linux",
-         "netAmount": 0.0, "grossAmount": 40.0, "repositoryName": "fravityai/fravity"},
+         "netAmount": 0.0, "grossAmount": 40.0, "repositoryName": "acme-inc/widgets"},
         # both 0 -> dropped
         {"date": "2026-06-01", "product": "actions", "sku": "Actions storage",
          "netAmount": 0.0, "grossAmount": 0.0},
@@ -35,7 +35,7 @@ def test_keeps_net_and_gross_only_rows(monkeypatch):
     # fully discounted: net 0 but list price retained
     assert by_service["actions"].billed_cost == 0.0
     assert by_service["actions"].list_cost == 40.0
-    assert by_service["actions"].sub_account == "fravityai/fravity"
+    assert by_service["actions"].sub_account == "acme-inc/widgets"
     assert all(r.provider == "github" and r.billing_account == "acme" for r in rows)
 
 
