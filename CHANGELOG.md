@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.5.0](https://github.com/75asu/ducat/compare/v0.4.1...v0.5.0) (2026-08-04)
+
+
+### Features
+
+* **config:** substitute ${VAR} references in config values ([8396103](https://github.com/75asu/ducat/commit/83961034548dc413ea32fd8b3d6d926b54728e84))
+* **gcp:** add Cloud Billing adapter with historical Cost table CSV import ([73cb383](https://github.com/75asu/ducat/commit/73cb38362272b58131a303a1cb980bef1e6c368f))
+* **helm:** support extra volumes for supplying historical CSVs ([e0edee6](https://github.com/75asu/ducat/commit/e0edee6704c148be56ea531fcf275cf9999393d1))
+* **local:** docker compose stack with env-driven config ([0730725](https://github.com/75asu/ducat/commit/0730725f412634f9b48ca925dfe780e34669c20f))
+* **metrics:** add sub_account label for per-project cost attribution ([a392581](https://github.com/75asu/ducat/commit/a392581531ec26647087e511614a259eba84479e))
+
+
+### Bug Fixes
+
+* **ci:** install the dev extra so ruff is available ([5b8f6f9](https://github.com/75asu/ducat/commit/5b8f6f94102d2ba54a28e95bc9d61e63adedd2de))
+* **dashboards:** scope every panel by project and service ([bed813b](https://github.com/75asu/ducat/commit/bed813b164c12b3f0c60512d26a127a1d638a531))
+* **gcp:** validate source before importing the optional bigquery dep ([09a0ea5](https://github.com/75asu/ducat/commit/09a0ea5092319191d8ce81276c049b6096429c6e))
+
 ## [0.4.1](https://github.com/75asu/ducat/compare/v0.4.0...v0.4.1) (2026-07-20)
 
 
