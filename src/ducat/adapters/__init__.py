@@ -22,11 +22,11 @@ def get(name: str) -> Adapter:
         return _REGISTRY[name]()
     except KeyError:
         known = ", ".join(sorted(_REGISTRY)) or "(none)"
-        raise RuntimeError(f"unknown provider '{name}'. Available: {known}")
+        raise RuntimeError(f"unknown provider '{name}'. Available: {known}") from None
 
 
 def available() -> list[str]:
     return sorted(_REGISTRY)
 
 
-__all__ = ["Adapter", "get", "available"]
+__all__ = ["Adapter", "available", "get"]

@@ -260,3 +260,18 @@ def test_adapter_works_with_no_csv_dir(monkeypatch):
     adapter = GcpAdapter()
     monkeypatch.setattr(adapter, "_fetch_bigquery", lambda opts: [row])
     assert adapter.fetch({"dataset": "x"}) == [row]
+
+
+def test_row_narrower_than_header_is_refused(tmp_path):
+    """A misaligned row must fail loudly, not get silently truncated.
+
+    Every row in real exports is exactly header-width. If that stops being true the
+    format has moved, and zipping a short row would drop or misalign columns of a
+    billing file, understating the month. Refusing to load is the safer failure.
+    """
+    body = _gross_only().replace(
+        "2026-06-01,2026-06-30,10,gibibyte,500.5,500.50",
+        "2026-06-01,2026-06-30,10,gibibyte,500.5",  # one field short
+    )
+    with pytest.raises(ValueError, match="fields but the header has"):
+        gcp_csv.read_file(_write(tmp_path, "short.csv", body))

@@ -28,7 +28,7 @@ dependencies = [
 push = ["prometheus-remote-writer>=0.1.5"]
 aws = ["boto3>=1.34"]
 gcp = ["google-cloud-bigquery>=3.0"]
-dev = ["pytest>=8.0", "ruff>=0.5"]
+dev = ["pytest>=8.0", "ruff>=0.16,<0.17"]
 
 [project.scripts]
 ducat = "ducat.cli:main"
@@ -42,3 +42,28 @@ packages = ["src/ducat"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+# Ruff's default rule set grows between releases, so an unpinned ruff can redden CI
+# with no code change. Both the version (above) and the rules are pinned for that
+# reason: a lint failure should mean someone wrote something, not that a tool shipped.
+extend-select = ["I", "UP", "B", "C4", "SIM", "RUF"]
+
+ignore = [
+  # Broad `except Exception` is the deliberate resilience pattern here, not an
+  # oversight. Every adapter isolates per-provider and per-account failures so one
+  # bad credential cannot blank a whole cost board, and each handler increments
+  # ducat_scrape_error_total and continues. Narrowing these to the union of every
+  # cloud SDK's exception types would make the guarantee weaker, not stronger.
+  "BLE001",
+  # Billing periods are calendar dates, not instants. An invoice covers 2026-06-01
+  # to 2026-06-30 in the billing account's own reckoning; attaching a timezone to
+  # that implies a precision the data does not have and invites off-by-one-day
+  # errors at month boundaries.
+  "DTZ007",
+  "DTZ011",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures are plain module-level data, not mutable class state to annotate.
+"tests/*" = ["RUF012"]

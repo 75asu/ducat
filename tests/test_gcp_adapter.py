@@ -80,7 +80,7 @@ def test_missing_parts_is_a_clear_error():
 
 
 def test_bad_source_rejected():
-    with pytest.raises(RuntimeError, match="focus.*standard"):
+    with pytest.raises(RuntimeError, match=r"focus.*standard"):
         GcpAdapter().fetch({"table": "x.y.z", "source": "nope"})
 
 

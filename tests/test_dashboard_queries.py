@@ -86,7 +86,9 @@ def test_every_queried_metric_is_actually_exposed():
                             f"never exposes. Did you mean one of: "
                             f"{sorted(n for n in exposed if name in n)}?"
                         )
-    assert not problems, "dashboard queries reference non-existent metrics:\n  " + "\n  ".join(problems)
+    assert not problems, "dashboard queries reference non-existent metrics:\n  " + "\n  ".join(
+        problems
+    )
 
 
 def test_error_panel_uses_the_total_suffix():
@@ -127,7 +129,9 @@ def test_filter_variables_are_actually_wired_into_queries():
                         f"{path.name} panel {panel.get('id')} ({panel.get('title')!r}) "
                         f"filters $provider but ignores ${var}: {exprs}"
                     )
-    assert not problems, "template variable not wired into panel queries:\n  " + "\n  ".join(problems)
+    assert not problems, "template variable not wired into panel queries:\n  " + "\n  ".join(
+        problems
+    )
 
 
 def test_all_option_cannot_drop_empty_label_series():
@@ -175,11 +179,7 @@ def test_every_dashboard_surfaces_the_trustworthiness_signal():
     presents incomplete figures as complete, which is the failure mode the metric was
     added for. Cheap to include, and there is no dashboard where it is unwanted.
     """
-    missing = [
-        path.name
-        for path in DASHBOARDS
-        if "ducat_scrape_error" not in path.read_text()
-    ]
+    missing = [path.name for path in DASHBOARDS if "ducat_scrape_error" not in path.read_text()]
     assert not missing, (
         "dashboards with no scrape-error panel, so a failed source shows as a spend "
         f"drop instead of an error: {missing}"

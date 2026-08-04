@@ -97,7 +97,19 @@ def _parse_one(path: pathlib.Path) -> tuple[dict[str, str], list[dict[str, str]]
 
     preamble = {r[0].strip(): r[1].strip() for r in rows[:header_idx] if len(r) >= 2}
     header = [h.strip() for h in rows[header_idx]]
-    charges = [dict(zip(header, r)) for r in rows[header_idx + 1 :] if any(c.strip() for c in r)]
+    charges = []
+    for lineno, r in enumerate(rows[header_idx + 1 :], start=header_idx + 2):
+        if not any(c.strip() for c in r):
+            continue
+        if len(r) != len(header):
+            # strict: a row that is not header-width means the export format moved.
+            # Zipping it anyway would drop or misalign columns of a billing file and
+            # understate the total, which is far worse than refusing to load it.
+            raise ValueError(
+                f"{path.name}:{lineno}: row has {len(r)} fields but the header has "
+                f"{len(header)}. The Cost table export format may have changed."
+            )
+        charges.append(dict(zip(header, r, strict=True)))
     return preamble, charges
 
 
