@@ -24,11 +24,11 @@ jobs:
         with:
           enable-cache: true
       - name: Ruff , lint
-        run: uv run ruff check --output-format=github .
+        run: uv run --extra dev ruff check --output-format=github .
       - name: Ruff , format
         # Checked, never auto-applied: CI must not push commits, and a formatting
         # diff is the author's to resolve.
-        run: uv run ruff format --check --diff .
+        run: uv run --extra dev ruff format --check --diff .
 
   test:
     runs-on: ubuntu-latest

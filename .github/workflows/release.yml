@@ -60,9 +60,9 @@ jobs:
       - uses: azure/setup-helm@v4
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --extra dev ruff check .
       - name: Format
-        run: uv run ruff format --check .
+        run: uv run --extra dev ruff format --check .
       - name: Test on the oldest supported interpreter
         # requires-python is >=3.10. If the tag does not work on the floor we claim
         # to support, it is not releasable.
