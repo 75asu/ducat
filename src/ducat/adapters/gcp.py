@@ -133,17 +133,21 @@ class GcpAdapter:
         return historical + live
 
     def _fetch_bigquery(self, opts: dict[str, Any]) -> list[CostRow]:
+        # Validate config BEFORE importing the optional dependency. Otherwise a typo
+        # in `source` reports "install the gcp extra", which sends the reader after
+        # the wrong problem, and the error you get depends on which extras happen to
+        # be installed rather than on what you configured.
+        table = self._table(opts)
+        source = (opts.get("source") or "focus").lower()
+        if source not in ("focus", "standard"):
+            raise RuntimeError(f"gcp: source must be 'focus' or 'standard', got {source!r}")
+        from_date, to_date = self._window(opts)
+
         try:
             from google.cloud import bigquery
         except ImportError as exc:  # pragma: no cover
             raise RuntimeError("gcp: needs the 'gcp' extra , pip install 'ducat[gcp]'") from exc
 
-        table = self._table(opts)
-        source = (opts.get("source") or "focus").lower()
-        if source not in ("focus", "standard"):
-            raise RuntimeError(f"gcp: source must be 'focus' or 'standard', got {source!r}")
-
-        from_date, to_date = self._window(opts)
         sql = (_SQL_FOCUS if source == "focus" else _SQL_STANDARD).format(table=table)
 
         client = bigquery.Client(project=opts.get("query_project") or opts.get("project"))
